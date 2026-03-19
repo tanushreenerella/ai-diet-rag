@@ -28,97 +28,185 @@ def load_models():
     return embedding_model, index, texts
 
 embedding_model, index, texts = load_models()
+# Step system
+if "step" not in st.session_state:
+    st.session_state.step = 1
 
-# Sidebar (USER PROFILE)
-with st.sidebar:
-    st.header("👤 User Profile")
-    age = st.number_input("Age", 10, 80, 20)
-    weight = st.number_input("Weight (kg)", 30, 120, 60)
-    goal = st.selectbox("Goal", ["Muscle Gain", "Weight Loss", "Maintain"])
-
+if "user_data" not in st.session_state:
+    st.session_state.user_data = {}
+st.selectbox("Goal", ["Muscle Gain", "Weight Loss", "Maintain"])
 st.title("🥗 AI Diet Assistant")
-st.caption("Ask anything about diet, nutrition, or fitness")
 
-# Chat history
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+# ---------- STEP 1 ----------
+if st.session_state.step == 1:
+    st.subheader("Let's start with the basics")
 
-# Display old messages
-for msg in st.session_state.messages:
-    with st.chat_message(msg["role"]):
-        st.markdown(msg["content"])
+    name = st.text_input("What's your name?")
+    age = st.number_input("How old are you?", 10, 80)
+    gender = st.radio("Gender", ["Male", "Female", "Other"])
 
-# Chat input
-query = st.chat_input("Ask your diet question...")
+    if st.button("Next"):
+        st.session_state.user_data.update({
+            "name": name,
+            "age": age,
+            "gender": gender
+        })
+        st.session_state.step = 2
+        st.rerun()
 
-if query:
-    # Show user message
-    st.session_state.messages.append({"role": "user", "content": query})
-    with st.chat_message("user"):
-        st.markdown(query)
+# ---------- STEP 2 ----------
+elif st.session_state.step == 2:
+    st.subheader("Your physical stats")
 
-    # --- RAG PIPELINE ---
-    query_embedding = embedding_model.encode([query])
-    D, I = index.search(query_embedding, 3)
+    height = st.number_input("Height (cm)", 100, 220)
+    weight = st.number_input("Weight (kg)", 30, 150)
 
-    context = ""
-    results = []
+    col1, col2 = st.columns(2)
 
-    for idx in I[0]:
-        context += texts[idx]
-        results.append(texts[idx])
+    with col1:
+        if st.button("Back"):
+            st.session_state.step = 1
+            st.rerun()
 
-    # Better prompt (structured output)
-    prompt = f"""
-You are a professional diet assistant.
+    with col2:
+        if st.button("Next"):
+            st.session_state.user_data.update({
+                "height": height,
+                "weight": weight
+            })
+            st.session_state.step = 3
+            st.rerun()
 
-User Details:
-Age: {age}
-Weight: {weight}
-Goal: {goal}
+# ---------- STEP 3 ----------
+elif st.session_state.step == 3:
+    st.subheader("How active are you?")
+
+    activity = st.radio("", [
+        "Sedentary",
+        "Lightly Active",
+        "Moderately Active",
+        "Very Active"
+    ])
+
+    if st.button("Next"):
+        st.session_state.user_data["activity"] = activity
+        st.session_state.step = 4
+        st.rerun()
+
+# ---------- STEP 4 ----------
+elif st.session_state.step == 4:
+    st.subheader("What's your goal?")
+
+    goal = st.radio("", [
+        "Lose Weight",
+        "Maintain Weight",
+        "Gain Muscle"
+    ])
+
+    meals = st.radio("Meals per day", ["2", "3", "4", "5+"])
+
+    if st.button("Next"):
+        st.session_state.user_data.update({
+            "goal": goal,
+            "meals": meals
+        })
+        st.session_state.step = 5
+        st.rerun()
+
+# ---------- STEP 5 ----------
+elif st.session_state.step == 5:
+    st.subheader("Final details")
+
+    diet = st.text_area("Diet preferences")
+    health = st.text_area("Health conditions")
+
+    if st.button("Start AI Assistant 🚀"):
+        st.session_state.user_data.update({
+            "diet": diet,
+            "health": health
+        })
+        st.session_state.step = 6
+        st.rerun()
+
+# ---------- CHATBOT ----------
+elif st.session_state.step == 6:
+
+    st.subheader("💬 Your AI Diet Assistant")
+
+    user_data = st.session_state.user_data
+
+    # Chat history
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
+
+    # Show history
+    for msg in st.session_state.messages:
+        with st.chat_message(msg["role"]):
+            st.markdown(msg["content"])
+
+    query = st.chat_input("Ask your diet question...")
+
+    if query:
+        st.session_state.messages.append({"role": "user", "content": query})
+
+        with st.chat_message("user"):
+            st.markdown(query)
+
+        # RAG
+        query_embedding = embedding_model.encode([query])
+        D, I = index.search(query_embedding, 3)
+
+        context = ""
+        results = []
+
+        for idx in I[0]:
+            context += texts[idx]
+            results.append(texts[idx])
+
+        # PERSONALIZED PROMPT
+        prompt = f"""
+User Profile:
+Name: {user_data.get("name")}
+Age: {user_data.get("age")}
+Gender: {user_data.get("gender")}
+Height: {user_data.get("height")}
+Weight: {user_data.get("weight")}
+Activity: {user_data.get("activity")}
+Goal: {user_data.get("goal")}
+Meals: {user_data.get("meals")}
+Diet: {user_data.get("diet")}
+Health: {user_data.get("health")}
 
 User Question:
 {query}
 
-Nutrition Knowledge:
+Context:
 {context}
 
-Generate a structured diet plan:
-
-Breakfast:
-Lunch:
-Dinner:
-Snacks:
-Tips:
+Give a personalized diet answer.
 """
 
-    # Generate response
-    with st.chat_message("assistant"):
-        with st.spinner("Generating diet plan..."):
-            response = client.models.generate_content(
-                model="gemini-2.5-flash",
-                contents=prompt
-            )
+        with st.chat_message("assistant"):
+            with st.spinner("Thinking..."):
+                response = client.models.generate_content(
+                    model="gemini-2.5-flash",
+                    contents=prompt
+                )
 
-            ai_response = response.text
+                reply = response.text
+                st.markdown(reply)
 
-            st.markdown(ai_response)
+                st.session_state.messages.append({
+                    "role": "assistant",
+                    "content": reply
+                })
 
-            # Save message
-            st.session_state.messages.append(
-                {"role": "assistant", "content": ai_response}
-            )
+                # Visualization
+                st.subheader("📊 Nutrition Insight")
 
-            # Visualization
-            st.subheader("📊 Nutrition Insight")
+                import matplotlib.pyplot as plt
+                fig = plt.figure()
+                plt.bar(["Protein", "Carbs", "Fats"], [30, 50, 20])
+                plt.title("Macronutrient Distribution")
 
-            # Better dummy data (more realistic)
-            labels = ["Protein", "Carbs", "Fats"]
-            values = [30, 50, 20]
-
-            import matplotlib.pyplot as plt
-            fig = plt.figure()
-            plt.bar(labels, values)
-            plt.title("Macronutrient Distribution")
-
-            st.pyplot(fig)
+                st.pyplot(fig)
