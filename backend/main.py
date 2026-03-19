@@ -3,7 +3,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import os
-from dotenv import load_dotense
+from dotenv import load_dotenv
 from sentence_transformers import SentenceTransformer
 import faiss
 import numpy as np

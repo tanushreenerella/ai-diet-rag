@@ -2,9 +2,9 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "./ui/Button";
-import { Input } from "./ui/Input";
-import { ProgressBar } from "./ui/ProgressBar";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Progress } from "./ui/progress";
 import type { OnboardingData } from "@/lib/types";
 
 interface OnboardingModalProps {
@@ -264,7 +264,7 @@ export default function OnboardingModal({ isOpen, onClose, onComplete, userEmail
             <span className="text-sm text-gray-500">Step {step} of {totalSteps}</span>
             <span className="text-sm font-medium text-green-600">{progress}%</span>
           </div>
-          <ProgressBar progress={progress} />
+          <Progress value={progress} />
           <p className="text-sm text-gray-600 mt-2">
             Answer a few questions and get your personalized diet plan in minutes
           </p>
