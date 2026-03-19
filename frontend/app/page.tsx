@@ -155,7 +155,6 @@ export default function LandingPage() {
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
-        mode={authMode}
         onSuccess={handleAuthSuccess}
       />
 
