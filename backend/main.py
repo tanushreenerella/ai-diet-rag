@@ -39,6 +39,7 @@ async def chat(req: ChatRequest):
     try:
         print("Incoming request:", req)
         print("✅ CHAT HIT")
+
         query_embedding = np.array(
             embedding_model.encode([req.query])
         ).astype("float32")
@@ -50,31 +51,48 @@ async def chat(req: ChatRequest):
             context += texts[idx] + "\n"
 
         prompt = f"""
-You are a professional AI diet assistant.
+You are a friendly, conversational diet assistant.
 
-User Profile:
-- Age: {req.user_data.get('age')}
-- Weight: {req.user_data.get('weight')} kg
-- Height: {req.user_data.get('height')} cm
-- Goal: {req.user_data.get('goal')}
-- Dietary Preference: {req.user_data.get('dietary_preference')}
-- Activity Level: {req.user_data.get('activity_level')}
+Talk like a real human, not like a textbook or report.
 
-Question:
+Rules:
+- Do NOT use markdown formatting like **bold**, *, or headings
+- Keep the tone casual, simple, and natural
+- Avoid long structured lists unless necessary
+- Keep answers short to medium length
+- Sound like you're chatting with a friend
+- Personalize based on the user profile naturally (not rigidly)
+- Sometimes ask a follow-up question
+
+User:
+Age: {req.user_data.get('age')}
+Weight: {req.user_data.get('weight')} kg
+Height: {req.user_data.get('height')} cm
+Goal: {req.user_data.get('goal')}
+Diet: {req.user_data.get('dietary_preference')}
+Activity: {req.user_data.get('activity_level')}
+
+User question:
 {req.query}
 
 Context:
 {context}
 
-Give a helpful personalized answer.
+Now reply in a natural, friendly conversational way.
 """
 
+        # ✅ NOW INSIDE TRY
         response = client.models.generate_content(
             model="gemini-2.5-flash",
             contents=prompt
         )
 
-        reply = response.candidates[0].content.parts[0].text
+        # ✅ SAFE EXTRACTION
+        if hasattr(response, "text") and response.text:
+            reply = response.text
+        else:
+            print("⚠️ Empty or invalid response:", response)
+            reply = "Hmm, I couldn't come up with a good answer. Try again?"
 
         return {"reply": reply}
 
