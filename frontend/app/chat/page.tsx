@@ -4,8 +4,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import ChatInterface from "@/components/ChatInterface";
-import { UserProfile } from "@/lib/types";
-// Define the UserProfile type here or import from types
+import type { UserProfile } from "@/lib/types";
 
 export default function ChatPage() {
   const router = useRouter();
@@ -17,9 +16,9 @@ export default function ChatPage() {
     const isAuthenticated = localStorage.getItem("isAuthenticated");
     const profile = localStorage.getItem("userProfile");
 
-    console.log("Auth check:", { isAuthenticated, profile }); // Debug log
+    console.log("Auth check:", { isAuthenticated, profile });
 
-    if (!isAuthenticated) {
+    if (!isAuthenticated || isAuthenticated !== "true") {
       router.push("/");
       return;
     }
@@ -28,7 +27,7 @@ export default function ChatPage() {
       try {
         const parsedProfile = JSON.parse(profile);
         setUserProfile(parsedProfile);
-        console.log("Profile loaded:", parsedProfile); // Debug log
+        console.log("Profile loaded:", parsedProfile);
       } catch (error) {
         console.error("Error parsing profile:", error);
         router.push("/");
@@ -36,6 +35,14 @@ export default function ChatPage() {
     }
     setLoading(false);
   }, [router]);
+
+  const handleLogout = () => {
+    localStorage.removeItem("isAuthenticated");
+    localStorage.removeItem("userEmail");
+    localStorage.removeItem("userName");
+    localStorage.removeItem("userProfile");
+    router.push("/");
+  };
 
   if (loading) {
     return (
@@ -50,16 +57,16 @@ export default function ChatPage() {
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <p className="text-xl text-red-600 mb-4">No user profile found</p>
-          <Button onClick={() => router.push("/")}>
+          <button
+            onClick={() => router.push("/")}
+            className="bg-green-600 text-white px-4 py-2 rounded-lg"
+          >
             Go to Home
-          </Button>
+          </button>
         </div>
       </div>
     );
   }
 
-  return <ChatInterface userProfile={userProfile} />;
+  return <ChatInterface userProfile={userProfile} onLogout={handleLogout} />;
 }
-
-// Add this if Button is not imported
-import { Button } from "@/components/ui/button";

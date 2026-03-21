@@ -1,12 +1,11 @@
 // frontend/app/page.tsx
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import AuthModal from "@/components/AuthModal";
 import OnboardingModal from "@/components/OnboardingModal";
 
-// Define proper types for Button props
 interface ButtonProps {
   children: React.ReactNode;
   onClick?: () => void;
@@ -16,7 +15,6 @@ interface ButtonProps {
   disabled?: boolean;
 }
 
-// Simple button component with proper typing
 const Button = ({ 
   children, 
   onClick, 
@@ -47,34 +45,40 @@ const Button = ({
 export default function LandingPage() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isOnboardingOpen, setIsOnboardingOpen] = useState(false);
-  const [authMode, setAuthMode] = useState<"signin" | "signup">("signup");
+  const [authInitialMode, setAuthInitialMode] = useState<"signin" | "signup">("signup");
   const [userEmail, setUserEmail] = useState("");
   const router = useRouter();
 
+  // Check if user is already logged in
+  useEffect(() => {
+    const isAuthenticated = localStorage.getItem("isAuthenticated");
+    if (isAuthenticated === "true") {
+      router.push("/chat");
+    }
+  }, [router]);
+
   const openAuthModal = (mode: "signin" | "signup") => {
-    console.log("Opening modal with mode:", mode);
-    setAuthMode(mode);
+    setAuthInitialMode(mode);
     setIsAuthModalOpen(true);
   };
 
-  const handleAuthSuccess = (email: string) => {
-    console.log("Auth success with email:", email, "mode:", authMode);
+  const handleAuthSuccess = (email: string, mode: "signin" | "signup") => {
     setUserEmail(email);
     setIsAuthModalOpen(false);
     
-    if (authMode === "signup") {
+    if (mode === "signup") {
+      // Open onboarding modal after successful signup
       setIsOnboardingOpen(true);
     } else {
-      localStorage.setItem("isAuthenticated", "true");
-      localStorage.setItem("userEmail", email);
+      // For signin, go directly to chat
       router.push("/chat");
     }
   };
 
   const handleOnboardingComplete = (data: any) => {
     console.log("Onboarding complete with data:", data);
+    // Save user profile data
     localStorage.setItem("userProfile", JSON.stringify(data));
-    localStorage.setItem("isAuthenticated", "true");
     setIsOnboardingOpen(false);
     router.push("/chat");
   };
@@ -199,7 +203,7 @@ export default function LandingPage() {
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
-        mode={authMode}
+        initialMode={authInitialMode}
         onSuccess={handleAuthSuccess}
       />
 

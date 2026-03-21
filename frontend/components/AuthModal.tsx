@@ -9,19 +9,18 @@ import { Check, X } from "lucide-react";
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
-  mode: "signin" | "signup";
-  onSuccess: (email: string) => void;
+  initialMode?: "signin" | "signup";
+  onSuccess: (email: string, mode: "signin" | "signup") => void;
 }
 
 interface PasswordValidation {
   minLength: boolean;
-  hasNumber: boolean;
   hasUppercase: boolean;
-  hasLowercase: boolean;
   hasSpecialChar: boolean;
 }
 
-export default function AuthModal({ isOpen, onClose, mode, onSuccess }: AuthModalProps) {
+export default function AuthModal({ isOpen, onClose, initialMode = "signup", onSuccess }: AuthModalProps) {
+  const [mode, setMode] = useState<"signin" | "signup">(initialMode);
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -31,9 +30,7 @@ export default function AuthModal({ isOpen, onClose, mode, onSuccess }: AuthModa
   
   const [passwordValidation, setPasswordValidation] = useState<PasswordValidation>({
     minLength: false,
-    hasNumber: false,
     hasUppercase: false,
-    hasLowercase: false,
     hasSpecialChar: false
   });
   
@@ -41,15 +38,27 @@ export default function AuthModal({ isOpen, onClose, mode, onSuccess }: AuthModa
   const [passwordsMatch, setPasswordsMatch] = useState(true);
   const [error, setError] = useState("");
 
+  // Reset mode when modal opens with new initialMode
+  useEffect(() => {
+    if (isOpen) {
+      setMode(initialMode);
+      setFormData({
+        fullName: "",
+        email: "",
+        password: "",
+        confirmPassword: ""
+      });
+      setError("");
+    }
+  }, [isOpen, initialMode]);
+
   // Validate password on change
   useEffect(() => {
     const password = formData.password;
     
     setPasswordValidation({
       minLength: password.length >= 6,
-      hasNumber: /\d/.test(password),
       hasUppercase: /[A-Z]/.test(password),
-      hasLowercase: /[a-z]/.test(password),
       hasSpecialChar: /[!@#$%^&*(),.?":{}|<>]/.test(password)
     });
     
@@ -91,17 +100,33 @@ export default function AuthModal({ isOpen, onClose, mode, onSuccess }: AuthModa
       return;
     }
 
-    // Here you would typically make an API call to authenticate
-    console.log("Form submitted:", formData);
+    // Password validation for signin
+    if (mode === "signin" && !formData.password) {
+      setError("Password is required");
+      return;
+    }
+
+    console.log("Form submitted:", { mode, email: formData.email });
     
     // Save auth state
     localStorage.setItem("isAuthenticated", "true");
+    localStorage.setItem("userEmail", formData.email);
     if (mode === "signup") {
-      localStorage.setItem("userEmail", formData.email);
       localStorage.setItem("userName", formData.fullName);
     }
     
-    onSuccess(formData.email);
+    onSuccess(formData.email, mode);
+  };
+
+  const switchMode = () => {
+    setMode(mode === "signin" ? "signup" : "signin");
+    setError("");
+    setFormData({
+      fullName: "",
+      email: "",
+      password: "",
+      confirmPassword: ""
+    });
   };
 
   if (!isOpen) return null;
@@ -183,16 +208,8 @@ export default function AuthModal({ isOpen, onClose, mode, onSuccess }: AuthModa
                     text="At least 6 characters"
                   />
                   <RequirementItem 
-                    met={passwordValidation.hasNumber}
-                    text="At least 1 number"
-                  />
-                  <RequirementItem 
                     met={passwordValidation.hasUppercase}
                     text="At least 1 uppercase letter"
-                  />
-                  <RequirementItem 
-                    met={passwordValidation.hasLowercase}
-                    text="At least 1 lowercase letter"
                   />
                   <RequirementItem 
                     met={passwordValidation.hasSpecialChar}
@@ -205,22 +222,22 @@ export default function AuthModal({ isOpen, onClose, mode, onSuccess }: AuthModa
                   <div className="flex justify-between items-center mb-1">
                     <span className="text-xs text-gray-500">Password strength:</span>
                     <span className={`text-xs font-medium ${
-                      Object.values(passwordValidation).filter(Boolean).length <= 2 ? "text-red-500" :
-                      Object.values(passwordValidation).filter(Boolean).length <= 4 ? "text-yellow-500" :
+                      Object.values(passwordValidation).filter(Boolean).length <= 1 ? "text-red-500" :
+                      Object.values(passwordValidation).filter(Boolean).length <= 2 ? "text-yellow-500" :
                       "text-green-500"
                     }`}>
-                      {Object.values(passwordValidation).filter(Boolean).length}/5
+                      {Object.values(passwordValidation).filter(Boolean).length}/3
                     </span>
                   </div>
                   <div className="h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
                     <div 
                       className={`h-full transition-all duration-300 ${
-                        Object.values(passwordValidation).filter(Boolean).length <= 2 ? "bg-red-500" :
-                        Object.values(passwordValidation).filter(Boolean).length <= 4 ? "bg-yellow-500" :
+                        Object.values(passwordValidation).filter(Boolean).length <= 1 ? "bg-red-500" :
+                        Object.values(passwordValidation).filter(Boolean).length <= 2 ? "bg-yellow-500" :
                         "bg-green-500"
                       }`}
                       style={{ 
-                        width: `${(Object.values(passwordValidation).filter(Boolean).length / 5) * 100}%` 
+                        width: `${(Object.values(passwordValidation).filter(Boolean).length / 3) * 100}%` 
                       }}
                     />
                   </div>
@@ -258,6 +275,33 @@ export default function AuthModal({ isOpen, onClose, mode, onSuccess }: AuthModa
             {mode === "signin" ? "Sign In" : "Create Account"}
           </Button>
         </form>
+
+        {/* Toggle between signin and signup */}
+        <div className="mt-4 text-center text-sm">
+          {mode === "signin" ? (
+            <p className="text-gray-600">
+              Don't have an account?{" "}
+              <button
+                type="button"
+                onClick={switchMode}
+                className="text-green-600 hover:text-green-700 font-medium"
+              >
+                Sign up
+              </button>
+            </p>
+          ) : (
+            <p className="text-gray-600">
+              Already have an account?{" "}
+              <button
+                type="button"
+                onClick={switchMode}
+                className="text-green-600 hover:text-green-700 font-medium"
+              >
+                Sign in
+              </button>
+            </p>
+          )}
+        </div>
 
         <p className="text-xs text-gray-500 mt-4 text-center">
           By continuing, you agree to our Terms of Service and Privacy Policy

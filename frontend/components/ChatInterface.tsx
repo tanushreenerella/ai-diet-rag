@@ -6,6 +6,7 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import type { UserProfile } from "@/lib/types";
 import axios from "axios";
+import { LogOut } from "lucide-react";
 
 interface Message {
   id: string;
@@ -16,9 +17,10 @@ interface Message {
 
 interface ChatInterfaceProps {
   userProfile: UserProfile;
+  onLogout: () => void;
 }
 
-export default function ChatInterface({ userProfile }: ChatInterfaceProps) {
+export default function ChatInterface({ userProfile, onLogout }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "1",
@@ -54,7 +56,6 @@ export default function ChatInterface({ userProfile }: ChatInterfaceProps) {
     setIsLoading(true);
 
     try {
-      // Call your backend API
       const response = await axios.post("http://localhost:8000/chat", {
         query: input,
         user_data: {
@@ -78,7 +79,6 @@ export default function ChatInterface({ userProfile }: ChatInterfaceProps) {
     } catch (error) {
       console.error("Error sending message:", error);
       
-      // Error message
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         content: "I'm having trouble connecting right now. Please try again later.",
@@ -94,15 +94,23 @@ export default function ChatInterface({ userProfile }: ChatInterfaceProps) {
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Sidebar */}
-      <div className="w-80 bg-white border-r p-6">
-        <div className="flex items-center space-x-2 mb-8">
+      <div className="w-80 bg-white border-r p-6 flex flex-col">
+        <div className="flex items-center justify-between mb-8">
           <span className="text-2xl font-bold text-gray-800">NutriAI</span>
+          <button
+            onClick={onLogout}
+            className="p-2 text-gray-600 hover:text-red-600 transition-colors"
+            title="Logout"
+          >
+            <LogOut className="w-5 h-5" />
+          </button>
         </div>
 
         {/* User Profile Summary */}
         <div className="bg-green-50 rounded-lg p-4 mb-6">
           <h3 className="font-medium text-gray-900 mb-2">Your Profile</h3>
           <div className="space-y-2 text-sm">
+            <p><span className="text-gray-600">Name:</span> {userProfile.name}</p>
             <p><span className="text-gray-600">Age:</span> {userProfile.age}</p>
             <p><span className="text-gray-600">Height:</span> {userProfile.height} cm</p>
             <p><span className="text-gray-600">Weight:</span> {userProfile.weight} kg</p>
