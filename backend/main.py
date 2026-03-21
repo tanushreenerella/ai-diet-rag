@@ -37,34 +37,36 @@ class ChatRequest(BaseModel):
 @app.post("/chat")
 async def chat(req: ChatRequest):
     try:
-        # Generate embedding for query
-        query_embedding = embedding_model.encode([req.query])
+        print("Incoming request:", req)
+
+        query_embedding = np.array(
+            embedding_model.encode([req.query])
+        ).astype("float32")
+
         D, I = index.search(query_embedding, 3)
 
-        # Build context from retrieved texts
         context = ""
         for idx in I[0]:
             context += texts[idx] + "\n"
 
-        # Enhanced prompt with user profile
         prompt = f"""
-You are a professional AI diet assistant. Use the provided context and user profile to give personalized advice.
+You are a professional AI diet assistant.
 
 User Profile:
-- Age: {req.user_data.get('age', 'Not specified')}
-- Weight: {req.user_data.get('weight', 'Not specified')} kg
-- Height: {req.user_data.get('height', 'Not specified')} cm
-- Goal: {req.user_data.get('goal', 'Not specified')}
-- Dietary Preference: {req.user_data.get('dietary_preference', 'None')}
-- Activity Level: {req.user_data.get('activity_level', 'Not specified')}
+- Age: {req.user_data.get('age')}
+- Weight: {req.user_data.get('weight')} kg
+- Height: {req.user_data.get('height')} cm
+- Goal: {req.user_data.get('goal')}
+- Dietary Preference: {req.user_data.get('dietary_preference')}
+- Activity Level: {req.user_data.get('activity_level')}
 
-User Question:
+Question:
 {req.query}
 
-Relevant Nutrition Information:
+Context:
 {context}
 
-Provide a personalized, helpful, and encouraging response. Include specific recommendations based on their profile.
+Give a helpful personalized answer.
 """
 
         response = client.models.generate_content(
@@ -72,11 +74,10 @@ Provide a personalized, helpful, and encouraging response. Include specific reco
             contents=prompt
         )
 
-        return {"reply": response.text}
-    
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        reply = response.candidates[0].content.parts[0].text
 
-@app.get("/health")
-async def health_check():
-    return {"status": "healthy"}
+        return {"reply": reply}
+
+    except Exception as e:
+        print("🔥 ERROR:", e)
+        raise HTTPException(status_code=500, detail=str(e))
