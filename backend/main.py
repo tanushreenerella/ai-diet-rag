@@ -17,7 +17,7 @@ app = FastAPI()
 # CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -38,7 +38,7 @@ class ChatRequest(BaseModel):
 async def chat(req: ChatRequest):
     try:
         print("Incoming request:", req)
-
+        print("✅ CHAT HIT")
         query_embedding = np.array(
             embedding_model.encode([req.query])
         ).astype("float32")

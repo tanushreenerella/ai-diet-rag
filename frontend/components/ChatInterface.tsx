@@ -56,7 +56,7 @@ export default function ChatInterface({ userProfile, onLogout }: ChatInterfacePr
     setIsLoading(true);
 
     try {
-      const response = await axios.post("http://localhost:3000/chat", {
+      const response = await axios.post("http://127.0.0.1:8000/chat", {
         query: input,
         user_data: {
           age: userProfile.age,
