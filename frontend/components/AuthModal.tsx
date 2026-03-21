@@ -5,7 +5,8 @@ import { useState, useEffect } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Check, X } from "lucide-react";
-
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "@/lib/firebase"; // adjust path if needed
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -70,53 +71,76 @@ export default function AuthModal({ isOpen, onClose, initialMode = "signup", onS
 
   const isPasswordValid = () => {
     return Object.values(passwordValidation).every(Boolean);
-  };
+  }; 
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
+ const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setError("");
 
-    // Validation for signup
+  try {
+    // Basic validation
+    if (!formData.email.includes("@") || !formData.email.includes(".")) {
+      setError("Please enter a valid email");
+      return;
+    }
+
     if (mode === "signup") {
       if (!formData.fullName.trim()) {
         setError("Full name is required");
         return;
       }
-      
+
       if (!isPasswordValid()) {
-        setError("Please meet all password requirements");
+        setError("Password does not meet requirements");
         return;
       }
-      
+
       if (!passwordsMatch) {
         setError("Passwords do not match");
         return;
       }
+
+      // 🔥 FIREBASE SIGNUP
+      await createUserWithEmailAndPassword(
+        auth,
+        formData.email,
+        formData.password
+      );
+
+    } else {
+      if (!formData.password) {
+        setError("Password is required");
+        return;
+      }
+
+      // 🔥 FIREBASE LOGIN
+      await signInWithEmailAndPassword(
+        auth,
+        formData.email,
+        formData.password
+      );
     }
 
-    // Email validation
-    if (!formData.email.includes("@") || !formData.email.includes(".")) {
-      setError("Please enter a valid email address");
-      return;
-    }
-
-    // Password validation for signin
-    if (mode === "signin" && !formData.password) {
-      setError("Password is required");
-      return;
-    }
-
-    console.log("Form submitted:", { mode, email: formData.email });
-    
-    // Save auth state
-    localStorage.setItem("isAuthenticated", "true");
+    // ✅ optional: store minimal info locally
     localStorage.setItem("userEmail", formData.email);
-    if (mode === "signup") {
-      localStorage.setItem("userName", formData.fullName);
-    }
-    
+
     onSuccess(formData.email, mode);
-  };
+
+  } catch (err: any) {
+    console.error(err);
+
+    // Better error messages
+    if (err.code === "auth/email-already-in-use") {
+      setError("Email already registered");
+    } else if (err.code === "auth/user-not-found") {
+      setError("No account found with this email");
+    } else if (err.code === "auth/wrong-password") {
+      setError("Incorrect password");
+    } else {
+      setError("Something went wrong. Try again.");
+    }
+  }
+};
 
   const switchMode = () => {
     setMode(mode === "signin" ? "signup" : "signin");
