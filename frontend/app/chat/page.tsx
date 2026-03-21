@@ -1,4 +1,3 @@
-// frontend/app/chat/page.tsx
 "use client";
 
 import { useEffect, useState } from "react";
@@ -12,61 +11,41 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if user is authenticated
     const isAuthenticated = localStorage.getItem("isAuthenticated");
     const profile = localStorage.getItem("userProfile");
 
     console.log("Auth check:", { isAuthenticated, profile });
 
-    if (!isAuthenticated || isAuthenticated !== "true") {
-      router.push("/");
+    // 🚨 FIX: invalidate broken auth state
+    if (isAuthenticated === "true" && !profile) {
+      localStorage.removeItem("isAuthenticated"); // 🔥 important
+    }
+
+    if (isAuthenticated !== "true" || !profile) {
+      router.replace("/");
       return;
     }
 
-    if (profile) {
-      try {
-        const parsedProfile = JSON.parse(profile);
-        setUserProfile(parsedProfile);
-        console.log("Profile loaded:", parsedProfile);
-      } catch (error) {
-        console.error("Error parsing profile:", error);
-        router.push("/");
-      }
+    try {
+      const parsedProfile = JSON.parse(profile);
+      setUserProfile(parsedProfile);
+    } catch (error) {
+      localStorage.clear(); // 🔥 clean bad state
+      router.replace("/");
+      return;
     }
+
     setLoading(false);
   }, [router]);
 
   const handleLogout = () => {
-    localStorage.removeItem("isAuthenticated");
-    localStorage.removeItem("userEmail");
-    localStorage.removeItem("userName");
-    localStorage.removeItem("userProfile");
-    router.push("/");
+    localStorage.clear();
+    router.replace("/");
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-xl">Loading...</div>
-      </div>
-    );
-  }
+  if (loading) return null;
 
-  if (!userProfile) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-xl text-red-600 mb-4">No user profile found</p>
-          <button
-            onClick={() => router.push("/")}
-            className="bg-green-600 text-white px-4 py-2 rounded-lg"
-          >
-            Go to Home
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  return <ChatInterface userProfile={userProfile} onLogout={handleLogout} />;
+  return (
+    <ChatInterface userProfile={userProfile!} onLogout={handleLogout} />
+  );
 }
