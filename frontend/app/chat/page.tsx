@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import ChatInterface from "@/components/ChatInterface";
 import type { UserProfile } from "@/lib/types";
+import { onAuthStateChanged, signOut } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 
 export default function ChatPage() {
   const router = useRouter();
@@ -11,41 +13,68 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const isAuthenticated = localStorage.getItem("isAuthenticated");
-    const profile = localStorage.getItem("userProfile");
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      console.log("Auth state:", user);
 
-    console.log("Auth check:", { isAuthenticated, profile });
+      // ❌ no user → go back
+      if (!user) {
+        router.replace("/");
+        return;
+      }
 
-    // 🚨 FIX: invalidate broken auth state
-    if (isAuthenticated === "true" && !profile) {
-      localStorage.removeItem("isAuthenticated"); // 🔥 important
-    }
+      // ✅ try to load profile
+      const profile = localStorage.getItem("userProfile");
 
-    if (isAuthenticated !== "true" || !profile) {
-      router.replace("/");
-      return;
-    }
+      if (profile) {
+        try {
+          setUserProfile(JSON.parse(profile));
+        } catch {
+          localStorage.removeItem("userProfile");
+        }
+      }
 
-    try {
-      const parsedProfile = JSON.parse(profile);
-      setUserProfile(parsedProfile);
-    } catch (error) {
-      localStorage.clear(); // 🔥 clean bad state
-      router.replace("/");
-      return;
-    }
+      setLoading(false);
+    });
 
-    setLoading(false);
+    return () => unsubscribe();
   }, [router]);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     localStorage.clear();
+    await signOut(auth);
     router.replace("/");
   };
 
-  if (loading) return null;
+  if (loading) {
+    return (
+      <div className="h-screen flex items-center justify-center">
+        Loading...
+      </div>
+    );
+  }
+
+  // ✅ fallback profile (NO TS ERROR now)
+  const safeProfile: UserProfile = userProfile || {
+  name: "User",
+  age: 0,
+  gender: "other", // ✅ required
+
+  height: 0,
+  weight: 0,
+
+  activityLevel: "moderately_active", // ✅ correct enum
+
+  primaryGoal: "maintain", // ✅ correct enum
+  mealsPerDay: 3, // ✅ required
+
+  dietaryRestrictions: "none",
+  healthConditions: "none" // ✅ required
+};
 
   return (
-    <ChatInterface userProfile={userProfile!} onLogout={handleLogout} />
+    <ChatInterface
+      userProfile={safeProfile}
+      onLogout={handleLogout}
+    />
   );
 }
