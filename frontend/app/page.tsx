@@ -5,7 +5,44 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import AuthModal from "@/components/AuthModal";
 import OnboardingModal from "@/components/OnboardingModal";
-import { Button } from "@/components/ui/button";
+
+// Define proper types for Button props
+interface ButtonProps {
+  children: React.ReactNode;
+  onClick?: () => void;
+  className?: string;
+  variant?: "default" | "outline";
+  type?: "button" | "submit" | "reset";
+  disabled?: boolean;
+}
+
+// Simple button component with proper typing
+const Button = ({ 
+  children, 
+  onClick, 
+  className = "", 
+  variant = "default", 
+  type = "button", 
+  disabled = false 
+}: ButtonProps) => {
+  const baseClasses = "px-4 py-2 rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2";
+  
+  const variants: Record<"default" | "outline", string> = {
+    default: "bg-green-600 text-white hover:bg-green-700 focus:ring-green-500",
+    outline: "border-2 border-gray-300 hover:bg-gray-50 focus:ring-gray-500"
+  };
+  
+  return (
+    <button
+      type={type}
+      onClick={onClick}
+      disabled={disabled}
+      className={`${baseClasses} ${variants[variant]} ${className} ${disabled ? "opacity-50 cursor-not-allowed" : ""}`}
+    >
+      {children}
+    </button>
+  );
+};
 
 export default function LandingPage() {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
@@ -15,23 +52,30 @@ export default function LandingPage() {
   const router = useRouter();
 
   const openAuthModal = (mode: "signin" | "signup") => {
+    console.log("Opening modal with mode:", mode);
     setAuthMode(mode);
     setIsAuthModalOpen(true);
   };
 
   const handleAuthSuccess = (email: string) => {
+    console.log("Auth success with email:", email, "mode:", authMode);
     setUserEmail(email);
     setIsAuthModalOpen(false);
-    // Open onboarding modal after successful signup
-    setIsOnboardingOpen(true);
+    
+    if (authMode === "signup") {
+      setIsOnboardingOpen(true);
+    } else {
+      localStorage.setItem("isAuthenticated", "true");
+      localStorage.setItem("userEmail", email);
+      router.push("/chat");
+    }
   };
 
   const handleOnboardingComplete = (data: any) => {
-    // Save user profile data
+    console.log("Onboarding complete with data:", data);
     localStorage.setItem("userProfile", JSON.stringify(data));
     localStorage.setItem("isAuthenticated", "true");
     setIsOnboardingOpen(false);
-    // Redirect to chat page
     router.push("/chat");
   };
 
@@ -59,7 +103,6 @@ export default function LandingPage() {
           </button>
           <Button
             onClick={() => openAuthModal("signup")}
-            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
           >
             Get Started
           </Button>
@@ -84,20 +127,19 @@ export default function LandingPage() {
             <div className="flex space-x-4">
               <Button
                 onClick={() => openAuthModal("signup")}
-                className="bg-green-600 text-white px-8 py-3 rounded-lg text-lg hover:bg-green-700"
+                className="px-8 py-3 rounded-lg text-lg"
               >
                 Start Free Trial
               </Button>
               <Button
                 variant="outline"
-                className="border-2 border-gray-300 px-8 py-3 rounded-lg text-lg hover:bg-gray-50"
+                className="px-8 py-3 rounded-lg text-lg"
               >
                 Watch Demo
               </Button>
             </div>
           </div>
           <div className="relative h-96 bg-green-50 rounded-2xl flex items-center justify-center">
-            {/* Placeholder for hero image */}
             <span className="text-gray-400">Hero Image Placeholder</span>
           </div>
         </div>
@@ -114,7 +156,9 @@ export default function LandingPage() {
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
             {features.map((feature, index) => (
               <div key={index} className="bg-white p-6 rounded-xl shadow-sm">
-                <div className="w-12 h-12 bg-green-100 rounded-lg mb-4"></div>
+                <div className="w-12 h-12 bg-green-100 rounded-lg mb-4 flex items-center justify-center">
+                  <span className="text-2xl">{feature.icon}</span>
+                </div>
                 <h3 className="text-xl font-semibold mb-2">{feature.title}</h3>
                 <p className="text-gray-600">{feature.description}</p>
               </div>
@@ -155,6 +199,7 @@ export default function LandingPage() {
       <AuthModal
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
+        mode={authMode}
         onSuccess={handleAuthSuccess}
       />
 
@@ -172,26 +217,32 @@ export default function LandingPage() {
 const features = [
   {
     title: "AI Meal Planning",
-    description: "Personalized meal plans generated by AI based on your goals, preferences, and nutritional needs."
+    description: "Personalized meal plans generated by AI based on your goals, preferences, and nutritional needs.",
+    icon: "🍽️"
   },
   {
     title: "Smart Tracking",
-    description: "Log meals with photos and get instant AI-powered calorie and macro estimates."
+    description: "Log meals with photos and get instant AI-powered calorie and macro estimates.",
+    icon: "📱"
   },
   {
     title: "Progress Prediction",
-    description: "Weekly predictions and insights to keep you motivated and on track."
+    description: "Weekly predictions and insights to keep you motivated and on track.",
+    icon: "📈"
   },
   {
     title: "AI Chatbot",
-    description: "24/7 AI assistant to answer nutrition questions and provide guidance."
+    description: "24/7 AI assistant to answer nutrition questions and provide guidance.",
+    icon: "💬"
   },
   {
     title: "Expert Consultation",
-    description: "Book video calls with professional dietitians for personalized advice."
+    description: "Book video calls with professional dietitians for personalized advice.",
+    icon: "👨‍⚕️"
   },
   {
     title: "Health Metrics",
-    description: "Track BMR, TDEE, macros, and all your health data in one place."
+    description: "Track BMR, TDEE, macros, and all your health data in one place.",
+    icon: "📊"
   }
 ];
