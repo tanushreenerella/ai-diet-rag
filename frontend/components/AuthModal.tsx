@@ -127,19 +127,29 @@ export default function AuthModal({ isOpen, onClose, initialMode = "signup", onS
     onSuccess(formData.email, mode);
 
   } catch (err: any) {
-    console.error(err);
-
-    // Better error messages
-    if (err.code === "auth/email-already-in-use") {
+  switch (err.code) {
+    case "auth/email-already-in-use":
       setError("Email already registered");
-    } else if (err.code === "auth/user-not-found") {
+      break;
+
+    case "auth/user-not-found":
       setError("No account found with this email");
-    } else if (err.code === "auth/wrong-password") {
-      setError("Incorrect password");
-    } else {
-      setError("Something went wrong. Try again.");
-    }
+      break;
+
+    case "auth/wrong-password":
+    case "auth/invalid-credential":
+    case "auth/invalid-login-credentials":
+      setError("Wrong password");
+      break;
+
+    case "auth/invalid-email":
+      setError("Invalid email format");
+      break;
+
+    default:
+      setError("Login failed. Please try again.");
   }
+}
 };
 
   const switchMode = () => {

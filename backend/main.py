@@ -44,27 +44,29 @@ async def chat(req: ChatRequest):
             embedding_model.encode([req.query])
         ).astype("float32")
 
-        D, I = index.search(query_embedding, 3)
+        k = 5
+        D, I = index.search(query_embedding, k)
 
-        context = ""
-        for idx in I[0]:
-            context += texts[idx] + "\n"
+        context_list = [texts[idx] for idx in I[0]]
+        context = "\n".join(context_list)
 
         prompt = f"""
-You are a friendly, conversational diet assistant.
+You are a friendly AI diet assistant.
 
-Talk like a real human, not like a textbook or report.
+STRICT RULES:
+- DO NOT use markdown formatting
+- DO NOT use ** or * or any symbols for formatting
+- Return plain text only
+- Do NOT bold anything
+- Do NOT use bullet points unless absolutely necessary
 
-Rules:
-- Do NOT use markdown formatting like **bold**, *, or headings
-- Keep the tone casual, simple, and natural
-- Avoid long structured lists unless necessary
-- Keep answers short to medium length
-- Sound like you're chatting with a friend
-- Personalize based on the user profile naturally (not rigidly)
-- Sometimes ask a follow-up question
+Style:
+- Natural, conversational
+- Simple English
+- Short to medium answers
+- Sound like talking to a friend
 
-User:
+User Profile:
 Age: {req.user_data.get('age')}
 Weight: {req.user_data.get('weight')} kg
 Height: {req.user_data.get('height')} cm
@@ -72,13 +74,13 @@ Goal: {req.user_data.get('goal')}
 Diet: {req.user_data.get('dietary_preference')}
 Activity: {req.user_data.get('activity_level')}
 
-User question:
-{req.query}
-
 Context:
 {context}
 
-Now reply in a natural, friendly conversational way.
+User Question:
+{req.query}
+
+Now respond in plain text only, with zero formatting.
 """
 
         # ✅ NOW INSIDE TRY
