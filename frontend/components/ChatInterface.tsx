@@ -32,7 +32,7 @@ export default function ChatInterface({ userProfile, onLogout }: ChatInterfacePr
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-
+const [loadingMeal, setLoadingMeal] = useState(false);
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -108,7 +108,37 @@ const sendMessage = async () => {
     setIsLoading(false);
   }
 };
+const generateMealPlan = async () => {
+  setLoadingMeal(true);
 
+  try {
+    const res = await fetch("http://localhost:8000/generate-meal-plan", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        query: "generate meal plan",
+        user_data: userProfile,
+      }),
+    });
+
+    const data = await res.json();
+    setMessages(prev => [
+  ...prev,
+  {
+    id: Date.now().toString(),
+    content: data.meal_plan,
+    role: "assistant",
+    timestamp: new Date()
+  }
+]);
+  } catch (err) {
+    console.error(err);
+  }
+
+  setLoadingMeal(false);
+};
   return (
     <div className="flex h-screen bg-gray-50">
       {/* Sidebar */}
@@ -160,6 +190,13 @@ const sendMessage = async () => {
           >
             📋 Sample Meal Plan
           </Button>
+          <Button
+  variant="outline"
+  className="w-full justify-start text-left"
+  onClick={generateMealPlan}
+>
+  🥗 Generate Meal Plan
+</Button>
         </div>
       </div>
 

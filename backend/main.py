@@ -101,3 +101,62 @@ Now respond in plain text only, with zero formatting.
     except Exception as e:
         print("🔥 ERROR:", e)
         raise HTTPException(status_code=500, detail=str(e))
+@app.post("/generate-meal-plan")
+async def generate_meal_plan(req: ChatRequest):
+    try:
+        query_embedding = np.array(
+            embedding_model.encode(["healthy meal plan"])
+        ).astype("float32")
+
+        D, I = index.search(query_embedding, 5)
+        context = "\n".join([texts[idx] for idx in I[0]])
+
+        prompt = f"""
+You are a friendly AI diet assistant chatting with a user.
+
+IMPORTANT STYLE RULES:
+- Talk like a real person (casual, friendly tone)
+- No markdown formatting (no ** or *)
+- No fancy formatting
+- Keep it conversational
+- Keep structure simple (Breakfast, Lunch, Dinner, Snacks)
+- Do NOT over-format
+- Keep it natural like chat, not like a report
+
+User:
+Age: {req.user_data.get('age')}
+Weight: {req.user_data.get('weight')}
+Goal: {req.user_data.get('goal')}
+Diet: {req.user_data.get('dietary_preference')}
+
+Context:
+{context}
+
+User asked for a meal plan.
+
+Reply like this example style (IMPORTANT):
+
+"Alright, here’s a simple plan you can follow today:
+
+Breakfast: Oatmeal with fruits and some nuts.
+
+Lunch: Paneer with roti and vegetables.
+
+Dinner: Dal with rice and a side of salad.
+
+Snacks: Fruits or a handful of nuts between meals.
+
+Let me know if you want a veg-only or high-protein version!"
+
+Now generate a response in this same tone and format.
+"""
+
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt
+        )
+
+        return {"meal_plan": response.text}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
