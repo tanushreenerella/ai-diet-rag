@@ -160,3 +160,70 @@ Now generate a response in this same tone and format.
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+@app.post("/visualize-bmi")
+async def visualize_bmi(req: ChatRequest):
+    try:
+        weight = req.user_data.get("weight")
+        height_cm = req.user_data.get("height")
+
+        height_m = height_cm / 100
+        bmi = weight / (height_m ** 2)
+
+        if bmi < 18.5:
+            category = "Underweight"
+        elif bmi < 25:
+            category = "Normal"
+        elif bmi < 30:
+            category = "Overweight"
+        else:
+            category = "Obese"
+
+        return {
+            "bmi": round(bmi, 2),
+            "category": category
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+@app.post("/visualize-bmi")
+async def visualize_bmi(req: ChatRequest):
+    try:
+        weight = req.user_data.get("weight")
+        height_cm = req.user_data.get("height")
+
+        height_m = height_cm / 100
+        bmi = weight / (height_m ** 2)
+
+        if bmi < 18.5:
+            category = "Underweight"
+        elif bmi < 25:
+            category = "Normal"
+        elif bmi < 30:
+            category = "Overweight"
+        else:
+            category = "Obese"
+
+        return {
+            "bmi": round(bmi, 2),
+            "category": category
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))  
+@app.post("/visualize-macros")
+async def visualize_macros(req: ChatRequest):
+    try:
+        meal_text = req.query.lower()
+
+        protein = meal_text.count("paneer") + meal_text.count("chicken") + meal_text.count("egg")
+        carbs = meal_text.count("rice") + meal_text.count("roti") + meal_text.count("oats")
+        fats = meal_text.count("nuts") + meal_text.count("seeds")
+
+        return {
+            "protein": protein + 1,
+            "carbs": carbs + 1,
+            "fats": fats + 1
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
