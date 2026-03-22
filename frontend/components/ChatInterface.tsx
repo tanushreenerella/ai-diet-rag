@@ -46,35 +46,7 @@ const sendMessage = async () => {
   if (!input.trim() || isLoading) return;
 
   const currentInput = input; // ✅ FIX (important)
-  const getBMI = async () => {
-  const res = await fetch("http://localhost:8000/visualize-bmi", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      query: "",
-      user_data: userProfile,
-    }),
-  });
-const getMacros = async (mealText: string) => {
-  const res = await fetch("http://localhost:8000/visualize-macros", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      query: mealText,
-      user_data: userProfile,
-    }),
-  });
-
-  const data = await res.json();
-  setMacroData(data);
-};
-  const data = await res.json();
-  setBmiData(data);
-};
+  
   const userMessage: Message = {
     id: Date.now().toString(),
     content: currentInput,
@@ -142,7 +114,7 @@ const generateMealPlan = async () => {
   setLoadingMeal(true);
 
   try {
-    const res = await fetch("http://localhost:8000/generate-meal-plan", {
+    const res = await fetch("http://127.0.0.1:8000/generate-meal-plan", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -155,7 +127,7 @@ const generateMealPlan = async () => {
 
     const data = await res.json();
 
-    // ✅ show in chat (IMPORTANT)
+    // ✅ show in chat
     setMessages(prev => [
       ...prev,
       {
@@ -166,7 +138,7 @@ const generateMealPlan = async () => {
       }
     ]);
 
-    // 🔥 ADD THESE 2 LINES (MAIN PART)
+    // ✅ trigger visualization
     getMacros(data.meal_plan);
     getBMI();
 
@@ -322,6 +294,20 @@ const macros = {
             </div>
           )}
           <div ref={messagesEndRef} />
+          {macroData && bmiData && (
+  <div className="mt-6">
+    <h2 className="text-lg font-semibold mb-2">📊 Your Health Insights</h2>
+    
+    <HealthCharts
+      macros={{
+        protein: macroData.protein,
+        carbs: macroData.carbs,
+        fats: macroData.fats,
+      }}
+      bmi={bmiData.bmi}
+    />
+  </div>
+)}
         </div>
         {/* ✅ BMI DISPLAY */}
 {bmiData && (
