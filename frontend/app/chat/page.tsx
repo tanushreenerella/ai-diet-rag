@@ -4,8 +4,11 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import ChatInterface from "@/components/ChatInterface";
 import type { UserProfile } from "@/lib/types";
+
 import { onAuthStateChanged, signOut } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { auth, db } from "@/lib/firebase"; // ✅ added db
+
+import { doc, getDoc } from "firebase/firestore"; // ✅ added
 
 export default function ChatPage() {
   const router = useRouter();
@@ -13,24 +16,35 @@ export default function ChatPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       console.log("Auth state:", user);
 
-      // ❌ no user → go back
+      // ❌ no user → redirect
       if (!user) {
         router.replace("/");
         return;
       }
 
-      // ✅ try to load profile
-      const profile = localStorage.getItem("userProfile");
+      try {
+        // 🔥 FETCH PROFILE FROM FIRESTORE (MAIN FIX)
+        const docRef = doc(db, "users", user.uid);
+        const docSnap = await getDoc(docRef);
 
-      if (profile) {
-        try {
-          setUserProfile(JSON.parse(profile));
-        } catch {
-          localStorage.removeItem("userProfile");
+        if (docSnap.exists()) {
+          const data = docSnap.data();
+
+          setUserProfile(data as UserProfile);
+
+          // ✅ optional cache
+          localStorage.setItem("userProfile", JSON.stringify(data));
+        } else {
+          console.log("No profile found → redirecting to onboarding");
+
+          // ❗ if no profile exists → send to onboarding
+          router.replace("/onboarding");
         }
+      } catch (error) {
+        console.error("Error fetching profile:", error);
       }
 
       setLoading(false);
@@ -40,8 +54,11 @@ export default function ChatPage() {
   }, [router]);
 
   const handleLogout = async () => {
-    localStorage.clear();
     await signOut(auth);
+
+    // ✅ better than clear()
+    localStorage.removeItem("userProfile");
+
     router.replace("/");
   };
 
@@ -53,23 +70,19 @@ export default function ChatPage() {
     );
   }
 
-  // ✅ fallback profile (NO TS ERROR now)
+  // ✅ fallback (just safety, rarely used now)
   const safeProfile: UserProfile = userProfile || {
-  name: "User",
-  age: 0,
-  gender: "other", // ✅ required
-
-  height: 0,
-  weight: 0,
-
-  activityLevel: "moderately_active", // ✅ correct enum
-
-  primaryGoal: "maintain", // ✅ correct enum
-  mealsPerDay: 3, // ✅ required
-
-  dietaryRestrictions: "none",
-  healthConditions: "none" // ✅ required
-};
+    name: "User",
+    age: 0,
+    gender: "other",
+    height: 0,
+    weight: 0,
+    activityLevel: "moderately_active",
+    primaryGoal: "maintain",
+    mealsPerDay: 3,
+    dietaryRestrictions: "none",
+    healthConditions: "none",
+  };
 
   return (
     <ChatInterface
