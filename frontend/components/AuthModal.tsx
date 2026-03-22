@@ -6,7 +6,7 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Check, X } from "lucide-react";
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "@/lib/firebase"; // adjust path if needed
+import { auth } from "@/lib/firebase"; // adjust path if needed4
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;

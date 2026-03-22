@@ -1,30 +1,34 @@
 // frontend/lib/types.ts
+
+// 🔐 ONLY for login/signup
 export type UserAuth = {
   email: string;
   password: string;
   fullName: string;
 };
 
+// 🧠 onboarding form data
 export type OnboardingData = {
-  // Step 1: Basics
   name: string;
   age: number;
   gender: 'male' | 'female' | 'other';
-  
-  // Step 2: Physical stats
-  height: number; // in cm
-  weight: number; // in kg
-  
-  // Step 3: Activity level
-  activityLevel: 'sedentary' | 'lightly_active' | 'moderately_active' | 'very_active' | 'extra_active';
-  
-  // Step 4: Goals
+
+  height: number;
+  weight: number;
+
+  activityLevel:
+    | 'sedentary'
+    | 'lightly_active'
+    | 'moderately_active'
+    | 'very_active'
+    | 'extra_active';
+
   primaryGoal: 'lose_weight' | 'maintain' | 'gain_muscle';
   mealsPerDay: 2 | 3 | 4 | 5;
-  
-  // Step 5: Preferences
+
   dietaryRestrictions: string;
   healthConditions: string;
 };
 
-export type UserProfile = UserAuth & OnboardingData;
+// ✅ THIS is what chat actually uses
+export type UserProfile = OnboardingData;

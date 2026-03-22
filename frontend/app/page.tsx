@@ -5,7 +5,8 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import AuthModal from "@/components/AuthModal";
 import OnboardingModal from "@/components/OnboardingModal";
-
+import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "@/lib/firebase";
 interface ButtonProps {
   children: React.ReactNode;
   onClick?: () => void;
@@ -48,14 +49,24 @@ export default function LandingPage() {
   const [authInitialMode, setAuthInitialMode] = useState<"signin" | "signup">("signup");
   const [userEmail, setUserEmail] = useState("");
   const router = useRouter();
-
+ const [loading, setLoading] = useState(true);
   // Check if user is already logged in
-  useEffect(() => {
-    const isAuthenticated = localStorage.getItem("isAuthenticated");
-    if (isAuthenticated === "true") {
+ useEffect(() => {
+  const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const profile = localStorage.getItem("userProfile");
+
+    console.log("Landing check:", { user, profile });
+
+    // ✅ ONLY redirect if BOTH exist
+    if (user && profile) {
       router.push("/chat");
     }
-  }, [router]);
+
+    setLoading(false);
+  });
+
+  return () => unsubscribe();
+}, [router]);
 
   const openAuthModal = (mode: "signin" | "signup") => {
     setAuthInitialMode(mode);
@@ -63,17 +74,20 @@ export default function LandingPage() {
   };
 
   const handleAuthSuccess = (email: string, mode: "signin" | "signup") => {
-    setUserEmail(email);
-    setIsAuthModalOpen(false);
-    
-    if (mode === "signup") {
-      // Open onboarding modal after successful signup
-      setIsOnboardingOpen(true);
-    } else {
-      // For signin, go directly to chat
-      router.push("/chat");
-    }
-  };
+  setUserEmail(email);
+  setIsAuthModalOpen(false);
+
+  const existingProfile = localStorage.getItem("userProfile");
+
+  if (existingProfile) {
+    router.push("/chat");
+  } else if (mode === "signup") {
+    setIsOnboardingOpen(true);
+  } else {
+    // ✅ EXISTING USER WITHOUT PROFILE → allow chat anyway
+    router.push("/chat");
+  }
+};
 
   const handleOnboardingComplete = (data: any) => {
     console.log("Onboarding complete with data:", data);
@@ -82,7 +96,9 @@ export default function LandingPage() {
     setIsOnboardingOpen(false);
     router.push("/chat");
   };
-
+if (loading) {
+  return <div className="h-screen flex items-center justify-center">Loading...</div>;
+}
   return (
     <div className="min-h-screen bg-white">
       {/* Navbar */}

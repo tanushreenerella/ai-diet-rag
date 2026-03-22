@@ -40,24 +40,27 @@ export default function ChatInterface({ userProfile, onLogout }: ChatInterfacePr
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+const sendMessage = async () => {
+  if (!input.trim() || isLoading) return;
 
-  const sendMessage = async () => {
-    if (!input.trim() || isLoading) return;
+  const currentInput = input; // ✅ FIX (important)
+  
+  const userMessage: Message = {
+    id: Date.now().toString(),
+    content: currentInput,
+    role: "user",
+    timestamp: new Date()
+  };
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      content: input,
-      role: "user",
-      timestamp: new Date()
-    };
+  setMessages(prev => [...prev, userMessage]);
+  setInput("");
+  setIsLoading(true);
 
-    setMessages(prev => [...prev, userMessage]);
-    setInput("");
-    setIsLoading(true);
-
-    try {
-      const response = await axios.post("http://127.0.0.1:8000/chat", {
-        query: input,
+  try {
+    const response = await axios.post(
+      "http://127.0.0.1:8000/chat",
+      {
+        query: currentInput,
         user_data: {
           age: userProfile.age,
           weight: userProfile.weight,
@@ -66,30 +69,45 @@ export default function ChatInterface({ userProfile, onLogout }: ChatInterfacePr
           dietary_preference: userProfile.dietaryRestrictions,
           activity_level: userProfile.activityLevel
         }
-      });
+      },
+      {
+        timeout: 10000 // ✅ FIX
+      }
+    );
 
-      const assistantMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: response.data.reply,
-        role: "assistant",
-        timestamp: new Date()
-      };
+    const assistantMessage: Message = {
+      id: (Date.now() + 1).toString(),
+      content: response.data?.reply || "No response",
+      role: "assistant",
+      timestamp: new Date()
+    };
 
-      setMessages(prev => [...prev, assistantMessage]);
-    } catch (error) {
-      console.error("Error sending message:", error);
-      
-      const errorMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: "I'm having trouble connecting right now. Please try again later.",
-        role: "assistant",
-        timestamp: new Date()
-      };
-      setMessages(prev => [...prev, errorMessage]);
-    } finally {
-      setIsLoading(false);
+    setMessages(prev => [...prev, assistantMessage]);
+
+  } catch (error: any) {
+    console.error("Error:", error);
+
+    let message = "Something went wrong.";
+
+    if (error.response) {
+      message = error.response.data?.detail || "Server error";
+    } else if (error.request) {
+      message = "Server not responding";
     }
-  };
+
+    setMessages(prev => [
+      ...prev,
+      {
+        id: Date.now().toString(),
+        content: message,
+        role: "assistant",
+        timestamp: new Date()
+      }
+    ]);
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   return (
     <div className="flex h-screen bg-gray-50">
@@ -192,7 +210,11 @@ export default function ChatInterface({ userProfile, onLogout }: ChatInterfacePr
             <Input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              onKeyPress={(e) => e.key === "Enter" && sendMessage()}
+              onKeyDown={(e) => {
+  if (e.key === "Enter" && !isLoading) {
+    sendMessage();
+  }
+}}
               placeholder="Ask about your diet, meal plans, nutrition tips..."
               className="flex-1"
               disabled={isLoading}

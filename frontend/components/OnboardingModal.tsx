@@ -6,7 +6,8 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Progress } from "./ui/progress";
 import type { OnboardingData } from "@/lib/types";
-
+import { doc, setDoc } from "firebase/firestore";
+import { auth, db } from "@/lib/firebase";
 interface OnboardingModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -46,9 +47,41 @@ export default function OnboardingModal({ isOpen, onClose, onComplete, userEmail
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+  const user = auth.currentUser;
+
+  if (!user) {
+    console.log("No user found");
+    return;
+  }
+
+  try {
+    // 🔥 SAVE TO FIRESTORE (MAIN FIX)
+    await setDoc(doc(db, "users", user.uid), {
+      name: formData.name,
+      age: formData.age,
+      gender: formData.gender,
+      height: formData.height,
+      weight: formData.weight,
+      activityLevel: formData.activityLevel,
+      primaryGoal: formData.primaryGoal,
+      mealsPerDay: formData.mealsPerDay,
+      dietaryRestrictions: formData.dietaryRestrictions,
+      healthConditions: formData.healthConditions,
+    });
+
+    console.log("Profile saved ✅");
+
+    // optional cache
+    localStorage.setItem("userProfile", JSON.stringify(formData));
+
+    // ✅ continue existing flow
     onComplete(formData as OnboardingData);
-  };
+
+  } catch (error) {
+    console.error("Error saving profile:", error);
+  }
+};
 
   const renderStep = () => {
     switch (step) {
