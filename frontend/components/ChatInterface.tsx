@@ -7,7 +7,7 @@ import { Input } from "./ui/input";
 import type { UserProfile } from "@/lib/types";
 import axios from "axios";
 import { LogOut } from "lucide-react";
-
+import HealthCharts from "./HealthCharts";
 interface Message {
   id: string;
   content: string;
@@ -214,6 +214,13 @@ const getMacros = async (mealText: string) => {
   } catch (err) {
     console.error(err);
   }
+};
+const bmi = userProfile.weight / ((userProfile.height / 100) ** 2);
+
+const macros = {
+  protein: Math.round(userProfile.weight * 1.2),
+  carbs: Math.round(userProfile.weight * 2),
+  fats: Math.round(userProfile.weight * 0.8),
 };
   return (
     <div className="flex h-screen bg-gray-50">
