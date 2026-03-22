@@ -32,6 +32,8 @@ export default function ChatInterface({ userProfile, onLogout }: ChatInterfacePr
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [bmiData, setBmiData] = useState<any>(null);
+const [macroData, setMacroData] = useState<any>(null);
 const [loadingMeal, setLoadingMeal] = useState(false);
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -44,7 +46,35 @@ const sendMessage = async () => {
   if (!input.trim() || isLoading) return;
 
   const currentInput = input; // ✅ FIX (important)
-  
+  const getBMI = async () => {
+  const res = await fetch("http://localhost:8000/visualize-bmi", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      query: "",
+      user_data: userProfile,
+    }),
+  });
+const getMacros = async (mealText: string) => {
+  const res = await fetch("http://localhost:8000/visualize-macros", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      query: mealText,
+      user_data: userProfile,
+    }),
+  });
+
+  const data = await res.json();
+  setMacroData(data);
+};
+  const data = await res.json();
+  setBmiData(data);
+};
   const userMessage: Message = {
     id: Date.now().toString(),
     content: currentInput,
@@ -124,20 +154,66 @@ const generateMealPlan = async () => {
     });
 
     const data = await res.json();
+
+    // ✅ show in chat (IMPORTANT)
     setMessages(prev => [
-  ...prev,
-  {
-    id: Date.now().toString(),
-    content: data.meal_plan,
-    role: "assistant",
-    timestamp: new Date()
-  }
-]);
+      ...prev,
+      {
+        id: Date.now().toString(),
+        content: data.meal_plan,
+        role: "assistant",
+        timestamp: new Date(),
+      }
+    ]);
+
+    // 🔥 ADD THESE 2 LINES (MAIN PART)
+    getMacros(data.meal_plan);
+    getBMI();
+
   } catch (err) {
     console.error(err);
   }
 
   setLoadingMeal(false);
+};
+const getBMI = async () => {
+  try {
+    const res = await fetch("http://localhost:8000/visualize-bmi", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        query: "",
+        user_data: userProfile,
+      }),
+    });
+
+    const data = await res.json();
+    setBmiData(data);
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+const getMacros = async (mealText: string) => {
+  try {
+    const res = await fetch("http://localhost:8000/visualize-macros", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        query: mealText,
+        user_data: userProfile,
+      }),
+    });
+
+    const data = await res.json();
+    setMacroData(data);
+  } catch (err) {
+    console.error(err);
+  }
 };
   return (
     <div className="flex h-screen bg-gray-50">
@@ -240,7 +316,23 @@ const generateMealPlan = async () => {
           )}
           <div ref={messagesEndRef} />
         </div>
+        {/* ✅ BMI DISPLAY */}
+{bmiData && (
+  <div className="bg-white border rounded-lg p-4 mt-4">
+    <h3 className="font-semibold">Your BMI</h3>
+    <p>{bmiData.bmi} ({bmiData.category})</p>
+  </div>
+)}
 
+{/* ✅ MACRO DISPLAY */}
+{macroData && (
+  <div className="bg-white border rounded-lg p-4 mt-4">
+    <h3 className="font-semibold mb-2">Macro Distribution</h3>
+    <p>Protein: {macroData.protein}</p>
+    <p>Carbs: {macroData.carbs}</p>
+    <p>Fats: {macroData.fats}</p>
+  </div>
+)}
         {/* Input Area */}
         <div className="bg-white border-t p-4">
           <div className="flex space-x-4 max-w-4xl mx-auto">
