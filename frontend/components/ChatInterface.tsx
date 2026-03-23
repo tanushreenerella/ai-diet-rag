@@ -44,16 +44,17 @@ const [selectedFile, setSelectedFile] = useState<File | null>(null);
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
-const sendMessage = async () => {
-  if (!input.trim() || isLoading) return;
 
-  const currentInput = input; // ✅ FIX (important)
-  
+const sendMessage = async () => {
+  if ((!input.trim() && !selectedFile) || isLoading) return;
+
+  const currentInput = input;
+
   const userMessage: Message = {
     id: Date.now().toString(),
-    content: currentInput,
+    content: selectedFile ? "📷 Image uploaded" : currentInput,
     role: "user",
-    timestamp: new Date()
+    timestamp: new Date(),
   };
 
   setMessages(prev => [...prev, userMessage]);
@@ -61,53 +62,37 @@ const sendMessage = async () => {
   setIsLoading(true);
 
   try {
-    const response = await axios.post(
-      "http://127.0.0.1:8000/chat",
-      {
+    let response;
+
+    if (selectedFile) {
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+
+      response = await axios.post(
+        "http://127.0.0.1:8000/analyze-image",
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } }
+      );
+
+      setSelectedFile(null);
+    } else {
+      response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/chat`, {
         query: currentInput,
-        user_data: {
-          age: userProfile.age,
-          weight: userProfile.weight,
-          height: userProfile.height,
-          goal: userProfile.primaryGoal,
-          dietary_preference: userProfile.dietaryRestrictions,
-          activity_level: userProfile.activityLevel
-        }
-      },
-      {
-        timeout: 10000 // ✅ FIX
-      }
-    );
-
-    const assistantMessage: Message = {
-      id: (Date.now() + 1).toString(),
-      content: response.data?.reply || "No response",
-      role: "assistant",
-      timestamp: new Date()
-    };
-
-    setMessages(prev => [...prev, assistantMessage]);
-
-  } catch (error: any) {
-    console.error("Error:", error);
-
-    let message = "Something went wrong.";
-
-    if (error.response) {
-      message = error.response.data?.detail || "Server error";
-    } else if (error.request) {
-      message = "Server not responding";
+        user_data: userProfile,
+      });
     }
 
     setMessages(prev => [
       ...prev,
       {
-        id: Date.now().toString(),
-        content: message,
+        id: (Date.now() + 1).toString(),
+        content: response.data?.reply || "Processed successfully",
         role: "assistant",
-        timestamp: new Date()
-      }
+        timestamp: new Date(),
+      },
     ]);
+  } catch (error: any) {
+    console.error(error);
   } finally {
     setIsLoading(false);
   }
@@ -116,11 +101,9 @@ const generateMealPlan = async () => {
   setLoadingMeal(true);
 
   try {
-    const res = await fetch("http://127.0.0.1:8000/generate-meal-plan", {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/generate-meal-plan`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         query: "generate meal plan",
         user_data: userProfile,
@@ -129,7 +112,6 @@ const generateMealPlan = async () => {
 
     const data = await res.json();
 
-    // ✅ show in chat
     setMessages(prev => [
       ...prev,
       {
@@ -137,44 +119,9 @@ const generateMealPlan = async () => {
         content: data.meal_plan,
         role: "assistant",
         timestamp: new Date(),
-      }
+      },
     ]);
 
-    const macroRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/visualize-macros`, {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    query: data.meal_plan,
-    user_data: userProfile,
-  }),
-});
-
-const bmiRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/visualize-bmi`, {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    query: "",
-    user_data: userProfile,
-  }),
-});
-
-const macroData = await macroRes.json();
-const bmiData = await bmiRes.json();
-
-// ✅ PUSH AS CHAT MESSAGE
-setMessages(prev => [
-  ...prev,
-  {
-    id: Date.now().toString(),
-    role: "assistant",
-    timestamp: new Date(),
-    type: "chart",
-    chartData: {
-      macros: macroData,
-      bmi: bmiData,
-    },
-  },
-]);
   } catch (err) {
     console.error(err);
   }
