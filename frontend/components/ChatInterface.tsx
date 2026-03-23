@@ -139,7 +139,7 @@ const generateMealPlan = async () => {
       }
     ]);
 
-    const macroRes = await fetch("http://localhost:8000/visualize-macros", {
+    const macroRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/visualize-macros`, {
   method: "POST",
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify({
@@ -148,7 +148,7 @@ const generateMealPlan = async () => {
   }),
 });
 
-const bmiRes = await fetch("http://localhost:8000/visualize-bmi", {
+const bmiRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/visualize-bmi`, {
   method: "POST",
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify({
@@ -182,7 +182,7 @@ setMessages(prev => [
 };
 const getBMI = async () => {
   try {
-    const res = await fetch("http://localhost:8000/visualize-bmi", {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/visualize-bmi`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -202,7 +202,7 @@ const getBMI = async () => {
 
 const getMacros = async (mealText: string) => {
   try {
-    const res = await fetch("http://localhost:8000/visualize-macros", {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/visualize-macros`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
