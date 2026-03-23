@@ -18,7 +18,7 @@ interface Message {
   content?: string;
   role: "user" | "assistant";
   timestamp: Date;
-  type?: "text" | "chart";
+  type?: "text" | "chart"|"image";
   chartData?: any;
 }
 export default function ChatInterface({ userProfile, onLogout }: ChatInterfaceProps) {
@@ -36,6 +36,7 @@ export default function ChatInterface({ userProfile, onLogout }: ChatInterfacePr
   const [bmiData, setBmiData] = useState<any>(null);
 const [macroData, setMacroData] = useState<any>(null);
 const [loadingMeal, setLoadingMeal] = useState(false);
+const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -347,27 +348,50 @@ const macros = {
         </div>
         {/* Input Area */}
         <div className="bg-white border-t p-4">
-          <div className="flex space-x-4 max-w-4xl mx-auto">
-            <Input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={(e) => {
-  if (e.key === "Enter" && !isLoading) {
-    sendMessage();
-  }
-}}
-              placeholder="Ask about your diet, meal plans, nutrition tips..."
-              className="flex-1"
-              disabled={isLoading}
-            />
-            <Button
-              onClick={sendMessage}
-              disabled={isLoading || !input.trim()}
-              className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 disabled:opacity-50"
-            >
-              Send
-            </Button>
-          </div>
+          <div className="flex items-center space-x-2 max-w-4xl mx-auto">
+
+  {/* 🔥 HIDDEN FILE INPUT */}
+  <input
+    type="file"
+    accept="image/*"
+    className="hidden"
+    id="fileUpload"
+    onChange={(e) => {
+      if (e.target.files?.[0]) {
+        setSelectedFile(e.target.files[0]);
+      }
+    }}
+  />
+
+  {/* 🔥 PLUS BUTTON */}
+  <label
+    htmlFor="fileUpload"
+    className="cursor-pointer px-3 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
+  >
+    +
+  </label>
+
+  <Input
+    value={input}
+    onChange={(e) => setInput(e.target.value)}
+    onKeyDown={(e) => {
+      if (e.key === "Enter" && !isLoading) {
+        sendMessage();
+      }
+    }}
+    placeholder="Ask about your diet..."
+    className="flex-1"
+    disabled={isLoading}
+  />
+
+  <Button
+    onClick={sendMessage}
+    disabled={isLoading || (!input.trim() && !selectedFile)}
+    className="bg-green-600 text-white px-6 py-2 rounded-lg"
+  >
+    Send
+  </Button>
+</div>
         </div>
       </div>
     </div>
