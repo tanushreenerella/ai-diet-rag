@@ -50,12 +50,13 @@ const sendMessage = async () => {
 
   const currentInput = input;
 
-  const userMessage: Message = {
-    id: Date.now().toString(),
-    content: selectedFile ? "📷 Image uploaded" : currentInput,
-    role: "user",
-    timestamp: new Date(),
-  };
+const userMessage: Message = {
+  id: Date.now().toString(),
+  content: selectedFile ? URL.createObjectURL(selectedFile) : currentInput,
+  role: "user",
+  timestamp: new Date(),
+  type: selectedFile ? "image" : "text"
+};
 
   setMessages(prev => [...prev, userMessage]);
   setInput("");
@@ -67,9 +68,9 @@ const sendMessage = async () => {
     if (selectedFile) {
       const formData = new FormData();
       formData.append("file", selectedFile);
-
+      formData.append("user_data", JSON.stringify(userProfile));
       response = await axios.post(
-        "http://127.0.0.1:8000/analyze-image",
+        `${process.env.NEXT_PUBLIC_API_URL}/analyze-image`,
         formData,
         { headers: { "Content-Type": "multipart/form-data" } }
       );
