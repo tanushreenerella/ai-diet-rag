@@ -8,18 +8,19 @@ import type { UserProfile } from "@/lib/types";
 import axios from "axios";
 import { LogOut } from "lucide-react";
 import HealthCharts from "./HealthCharts";
-interface Message {
-  id: string;
-  content: string;
-  role: "user" | "assistant";
-  timestamp: Date;
-}
 
 interface ChatInterfaceProps {
   userProfile: UserProfile;
   onLogout: () => void;
 }
-
+interface Message {
+  id: string;
+  content?: string;
+  role: "user" | "assistant";
+  timestamp: Date;
+  type?: "text" | "chart";
+  chartData?: any;
+}
 export default function ChatInterface({ userProfile, onLogout }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -138,10 +139,41 @@ const generateMealPlan = async () => {
       }
     ]);
 
-    // ✅ trigger visualization
-    getMacros(data.meal_plan);
-    getBMI();
+    const macroRes = await fetch("http://localhost:8000/visualize-macros", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    query: data.meal_plan,
+    user_data: userProfile,
+  }),
+});
 
+const bmiRes = await fetch("http://localhost:8000/visualize-bmi", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    query: "",
+    user_data: userProfile,
+  }),
+});
+
+const macroData = await macroRes.json();
+const bmiData = await bmiRes.json();
+
+// ✅ PUSH AS CHAT MESSAGE
+setMessages(prev => [
+  ...prev,
+  {
+    id: Date.now().toString(),
+    role: "assistant",
+    timestamp: new Date(),
+    type: "chart",
+    chartData: {
+      macros: macroData,
+      bmi: bmiData,
+    },
+  },
+]);
   } catch (err) {
     console.error(err);
   }
@@ -266,26 +298,40 @@ const macros = {
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
           {messages.map((message) => (
-            <div
-              key={message.id}
-              className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
-            >
-              <div
-                className={`max-w-2xl rounded-lg p-4 ${
-                  message.role === "user"
-                    ? "bg-green-600 text-white"
-                    : "bg-white border"
-                }`}
-              >
-                <p className="whitespace-pre-wrap">{message.content}</p>
-                <p className={`text-xs mt-2 ${
-                  message.role === "user" ? "text-green-100" : "text-gray-500"
-                }`}>
-                  {message.timestamp.toLocaleTimeString()}
-                </p>
-              </div>
-            </div>
-          ))}
+  <div
+    key={message.id}
+    className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
+  >
+    <div
+      className={`max-w-2xl rounded-lg p-4 ${
+        message.role === "user"
+          ? "bg-green-600 text-white"
+          : "bg-white border"
+      }`}
+    >
+      {/* ✅ TEXT MESSAGE */}
+      {message.type !== "chart" && (
+        <p className="whitespace-pre-wrap">{message.content}</p>
+      )}
+
+      {/* ✅ CHART MESSAGE */}
+      {message.type === "chart" && message.chartData && (
+        <HealthCharts
+          macros={{
+            protein: message.chartData.macros.protein,
+            carbs: message.chartData.macros.carbs,
+            fats: message.chartData.macros.fats,
+          }}
+          bmi={message.chartData.bmi.bmi}
+        />
+      )}
+
+      <p className="text-xs mt-2 text-gray-500">
+        {message.timestamp.toLocaleTimeString()}
+      </p>
+    </div>
+  </div>
+))}
           {isLoading && (
             <div className="flex justify-start">
               <div className="bg-white border rounded-lg p-4">
@@ -294,38 +340,7 @@ const macros = {
             </div>
           )}
           <div ref={messagesEndRef} />
-          {macroData && bmiData && (
-  <div className="mt-6">
-    <h2 className="text-lg font-semibold mb-2">📊 Your Health Insights</h2>
-    
-    <HealthCharts
-      macros={{
-        protein: macroData.protein,
-        carbs: macroData.carbs,
-        fats: macroData.fats,
-      }}
-      bmi={bmiData.bmi}
-    />
-  </div>
-)}
         </div>
-        {/* ✅ BMI DISPLAY */}
-{bmiData && (
-  <div className="bg-white border rounded-lg p-4 mt-4">
-    <h3 className="font-semibold">Your BMI</h3>
-    <p>{bmiData.bmi} ({bmiData.category})</p>
-  </div>
-)}
-
-{/* ✅ MACRO DISPLAY */}
-{macroData && (
-  <div className="bg-white border rounded-lg p-4 mt-4">
-    <h3 className="font-semibold mb-2">Macro Distribution</h3>
-    <p>Protein: {macroData.protein}</p>
-    <p>Carbs: {macroData.carbs}</p>
-    <p>Fats: {macroData.fats}</p>
-  </div>
-)}
         {/* Input Area */}
         <div className="bg-white border-t p-4">
           <div className="flex space-x-4 max-w-4xl mx-auto">
