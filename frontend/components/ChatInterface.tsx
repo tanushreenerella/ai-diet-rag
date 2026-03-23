@@ -263,9 +263,19 @@ const macros = {
   }`}
 >
       {/* ✅ TEXT MESSAGE */}
-      {message.type !== "chart" && (
-        <p className="whitespace-pre-wrap">{message.content}</p>
-      )}
+     {/* ✅ IMAGE MESSAGE */}
+{message.type === "image" && (
+  <img
+    src={message.content}
+    alt="uploaded"
+    className="max-w-xs rounded-lg"
+  />
+)}
+
+{/* ✅ TEXT MESSAGE */}
+{message.type === "text" && (
+  <p className="whitespace-pre-wrap">{message.content}</p>
+)}
 
       {/* ✅ CHART MESSAGE */}
       {message.type === "chart" && message.chartData && (
