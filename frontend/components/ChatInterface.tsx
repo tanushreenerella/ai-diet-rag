@@ -303,12 +303,16 @@ const macros = {
     className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}
   >
     <div
-      className={`max-w-2xl rounded-lg p-4 ${
-        message.role === "user"
-          ? "bg-green-600 text-white"
-          : "bg-white border"
-      }`}
-    >
+  className={`rounded-lg p-4 ${
+    message.type === "chart"
+      ? "w-full max-w-4xl"
+      : "max-w-2xl"
+  } ${
+    message.role === "user"
+      ? "bg-green-600 text-white"
+      : "bg-white border"
+  }`}
+>
       {/* ✅ TEXT MESSAGE */}
       {message.type !== "chart" && (
         <p className="whitespace-pre-wrap">{message.content}</p>

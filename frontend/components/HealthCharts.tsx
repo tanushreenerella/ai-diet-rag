@@ -54,7 +54,7 @@ export default function HealthCharts({ macros, bmi }: Props) {
       {/* 🥧 PIE CHART */}
       <div>
         <h3 className="font-semibold mb-2">Macro Distribution</h3>
-        <ResponsiveContainer width="100%" height={250}>
+        <ResponsiveContainer width="100%" height={300}>
           <PieChart>
             <Pie
               data={macroData}
