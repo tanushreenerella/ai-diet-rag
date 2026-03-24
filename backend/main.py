@@ -8,8 +8,9 @@ from sentence_transformers import SentenceTransformer
 import faiss
 import numpy as np
 from google import genai
-from typing import Optional
-from fastapi import UploadFile, File, Form
+from typing import Optional,List
+from fastapi import UploadFile, File,Form
+import json
 load_dotenv()
 
 app = FastAPI()
@@ -33,6 +34,7 @@ client = genai.Client(api_key=os.getenv("GEMINI_KEY"))
 class ChatRequest(BaseModel):
     query: str
     user_data: dict
+    history: Optional[List[dict]] = []
 
 @app.post("/chat")
 async def chat(req: ChatRequest):
@@ -82,7 +84,7 @@ User Question:
 
 Now respond in plain text only, with zero formatting.
 """
-
+        prompt += f"\nConversation History:\n{req.history}"
         # ✅ NOW INSIDE TRY
         response = client.models.generate_content(
             model="gemini-2.5-flash",
@@ -184,32 +186,7 @@ async def visualize_bmi(req: ChatRequest):
         }
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-@app.post("/visualize-bmi")
-async def visualize_bmi(req: ChatRequest):
-    try:
-        weight = req.user_data.get("weight")
-        height_cm = req.user_data.get("height")
-
-        height_m = height_cm / 100
-        bmi = weight / (height_m ** 2)
-
-        if bmi < 18.5:
-            category = "Underweight"
-        elif bmi < 25:
-            category = "Normal"
-        elif bmi < 30:
-            category = "Overweight"
-        else:
-            category = "Obese"
-
-        return {
-            "bmi": round(bmi, 2),
-            "category": category
-        }
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))  
+        raise HTTPException(status_code=500, detail=str(e)) 
 @app.post("/visualize-macros")
 async def visualize_macros(req: ChatRequest):
     try:
@@ -227,7 +204,7 @@ async def visualize_macros(req: ChatRequest):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    @app.post("/analyze-image")
+@app.post("/analyze-image")
 async def analyze_image(
     file: UploadFile = File(...),
     user_data: str = Form(...)
@@ -248,9 +225,9 @@ Analyze this food image:
 
 1. Identify food items
 2. Tell if it's suitable for their goal
-3. Suggest improvement
+3. Suggest improvement if needed
 
-Keep it short and conversational.
+Keep it short, natural, and conversational.
 """
 
         response = client.models.generate_content(
@@ -264,7 +241,14 @@ Keep it short and conversational.
             ]
         )
 
-        return {"reply": response.text}
+        # Safe extraction
+        if hasattr(response, "text") and response.text:
+            reply = response.text
+        else:
+            reply = "I couldn't analyze the image properly. Try again?"
+
+        return {"reply": reply}
 
     except Exception as e:
+        print("🔥 IMAGE ERROR:", e)
         raise HTTPException(status_code=500, detail=str(e))

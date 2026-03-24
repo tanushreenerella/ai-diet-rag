@@ -44,18 +44,19 @@ const [selectedFile, setSelectedFile] = useState<File | null>(null);
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
 const sendMessage = async () => {
   if ((!input.trim() && !selectedFile) || isLoading) return;
 
-  const userMessage: Message = {
-    id: Date.now().toString(),
-    content: selectedFile
-      ? URL.createObjectURL(selectedFile)
-      : input,
-    role: "user",
-    timestamp: new Date(),
-    type: selectedFile ? "image" : "text"
-  };
+  const currentInput = input;
+
+const userMessage: Message = {
+  id: Date.now().toString(),
+  content: selectedFile ? URL.createObjectURL(selectedFile) : currentInput,
+  role: "user",
+  timestamp: new Date(),
+  type: selectedFile ? "image" : "text"
+};
 
   setMessages(prev => [...prev, userMessage]);
   setInput("");
@@ -68,7 +69,6 @@ const sendMessage = async () => {
       const formData = new FormData();
       formData.append("file", selectedFile);
       formData.append("user_data", JSON.stringify(userProfile));
-
       response = await axios.post(
         `${process.env.NEXT_PUBLIC_API_URL}/analyze-image`,
         formData,
@@ -77,27 +77,31 @@ const sendMessage = async () => {
 
       setSelectedFile(null);
     } else {
-      response = await axios.post(
-        `${process.env.NEXT_PUBLIC_API_URL}/chat`,
-        {
-          query: input,
-          user_data: userProfile,
-        }
-      );
+      response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/chat`, {
+        query: currentInput,
+        user_data: userProfile,
+        history: messages
+  .filter(m => m.type === "text" || !m.type)
+  .map(m => ({
+    role: m.role,
+    content: m.content
+  }))
+      });
     }
 
     setMessages(prev => [
       ...prev,
       {
-        id: Date.now().toString(),
-        content: response.data?.reply || "Done",
+        id: (Date.now() + 1).toString(),
+        content: response.data?.reply || "Processed successfully",
         role: "assistant",
         timestamp: new Date(),
       },
     ]);
-
-  } catch (err) {
-    console.error(err);
+  } catch (error: any) {
+    console.error(error);
+  } finally {
+    setIsLoading(false);
   }
 
   setIsLoading(false);
@@ -108,9 +112,7 @@ const generateMealPlan = async () => {
   try {
     const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/generate-meal-plan`, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         query: "generate meal plan",
         user_data: userProfile,
@@ -119,39 +121,22 @@ const generateMealPlan = async () => {
 
     const data = await res.json();
 
-    // ✅ show in chat
-    setMessages(prev => [
-      ...prev,
-      {
-        id: Date.now().toString(),
-        content: data.meal_plan,
-        role: "assistant",
-        timestamp: new Date(),
-      }
-    ]);
+// 1️⃣ Show meal plan text
+setMessages(prev => [
+  ...prev,
+  {
+    id: Date.now().toString(),
+    content: data.meal_plan,
+    role: "assistant",
+    timestamp: new Date(),
+  },
+]);
 
-    const macroRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/visualize-macros`, {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    query: data.meal_plan,
-    user_data: userProfile,
-  }),
-});
+// 2️⃣ Fetch macros + BMI
+const macros = await getMacros(data.meal_plan);
+const bmi = await getBMI();
 
-const bmiRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/visualize-bmi`, {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify({
-    query: "",
-    user_data: userProfile,
-  }),
-});
-
-const macroData = await macroRes.json();
-const bmiData = await bmiRes.json();
-
-// ✅ PUSH AS CHAT MESSAGE
+// 3️⃣ Push chart message
 setMessages(prev => [
   ...prev,
   {
@@ -160,11 +145,12 @@ setMessages(prev => [
     timestamp: new Date(),
     type: "chart",
     chartData: {
-      macros: macroData,
-      bmi: bmiData,
+      macros,
+      bmi
     },
   },
 ]);
+
   } catch (err) {
     console.error(err);
   }
@@ -184,8 +170,7 @@ const getBMI = async () => {
       }),
     });
 
-    const data = await res.json();
-    setBmiData(data);
+    return await res.json();
   } catch (err) {
     console.error(err);
   }
@@ -204,9 +189,8 @@ const getMacros = async (mealText: string) => {
       }),
     });
 
-    const data = await res.json();
-    setMacroData(data);
-  } catch (err) {
+    return await res.json();
+      } catch (err) {
     console.error(err);
   }
 };
@@ -305,9 +289,19 @@ const macros = {
   }`}
 >
       {/* ✅ TEXT MESSAGE */}
-      {message.type !== "chart" && (
-        <p className="whitespace-pre-wrap">{message.content}</p>
-      )}
+     {/* ✅ IMAGE MESSAGE */}
+{message.type === "image" && (
+  <img
+    src={message.content}
+    alt="uploaded"
+    className="max-w-xs rounded-lg"
+  />
+)}
+
+{/* ✅ TEXT MESSAGE */}
+{message.type === "text" && (
+  <p className="whitespace-pre-wrap">{message.content}</p>
+)}
 
       {/* ✅ CHART MESSAGE */}
       {message.type === "chart" && message.chartData && (
@@ -317,7 +311,7 @@ const macros = {
             carbs: message.chartData.macros.carbs,
             fats: message.chartData.macros.fats,
           }}
-          bmi={message.chartData.bmi.bmi}
+          bmi={message.chartData?.bmi?.bmi||0}
         />
       )}
 
