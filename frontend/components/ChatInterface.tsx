@@ -45,15 +45,16 @@ const [selectedFile, setSelectedFile] = useState<File | null>(null);
     scrollToBottom();
   }, [messages]);
 const sendMessage = async () => {
-  if (!input.trim() || isLoading) return;
+  if ((!input.trim() && !selectedFile) || isLoading) return;
 
-  const currentInput = input; // ✅ FIX (important)
-  
   const userMessage: Message = {
     id: Date.now().toString(),
-    content: currentInput,
+    content: selectedFile
+      ? URL.createObjectURL(selectedFile)
+      : input,
     role: "user",
-    timestamp: new Date()
+    timestamp: new Date(),
+    type: selectedFile ? "image" : "text"
   };
 
   setMessages(prev => [...prev, userMessage]);
@@ -61,62 +62,51 @@ const sendMessage = async () => {
   setIsLoading(true);
 
   try {
-    const response = await axios.post(
-      "http://127.0.0.1:8000/chat",
-      {
-        query: currentInput,
-        user_data: {
-          age: userProfile.age,
-          weight: userProfile.weight,
-          height: userProfile.height,
-          goal: userProfile.primaryGoal,
-          dietary_preference: userProfile.dietaryRestrictions,
-          activity_level: userProfile.activityLevel
+    let response;
+
+    if (selectedFile) {
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+      formData.append("user_data", JSON.stringify(userProfile));
+
+      response = await axios.post(
+        `${process.env.NEXT_PUBLIC_API_URL}/analyze-image`,
+        formData,
+        { headers: { "Content-Type": "multipart/form-data" } }
+      );
+
+      setSelectedFile(null);
+    } else {
+      response = await axios.post(
+        `${process.env.NEXT_PUBLIC_API_URL}/chat`,
+        {
+          query: input,
+          user_data: userProfile,
         }
-      },
-      {
-        timeout: 10000 // ✅ FIX
-      }
-    );
-
-    const assistantMessage: Message = {
-      id: (Date.now() + 1).toString(),
-      content: response.data?.reply || "No response",
-      role: "assistant",
-      timestamp: new Date()
-    };
-
-    setMessages(prev => [...prev, assistantMessage]);
-
-  } catch (error: any) {
-    console.error("Error:", error);
-
-    let message = "Something went wrong.";
-
-    if (error.response) {
-      message = error.response.data?.detail || "Server error";
-    } else if (error.request) {
-      message = "Server not responding";
+      );
     }
 
     setMessages(prev => [
       ...prev,
       {
         id: Date.now().toString(),
-        content: message,
+        content: response.data?.reply || "Done",
         role: "assistant",
-        timestamp: new Date()
-      }
+        timestamp: new Date(),
+      },
     ]);
-  } finally {
-    setIsLoading(false);
+
+  } catch (err) {
+    console.error(err);
   }
+
+  setIsLoading(false);
 };
 const generateMealPlan = async () => {
   setLoadingMeal(true);
 
   try {
-    const res = await fetch("http://127.0.0.1:8000/generate-meal-plan", {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/generate-meal-plan`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -348,9 +338,9 @@ const macros = {
         </div>
         {/* Input Area */}
         <div className="bg-white border-t p-4">
-          <div className="flex items-center space-x-2 max-w-4xl mx-auto">
+           <div className="flex items-center gap-2 max-w-4xl mx-auto bg-gray-100 rounded-full px-3 py-2">
 
-  {/* 🔥 HIDDEN FILE INPUT */}
+  {/* 🔥 FILE INPUT */}
   <input
     type="file"
     accept="image/*"
@@ -363,15 +353,32 @@ const macros = {
     }}
   />
 
-  {/* 🔥 PLUS BUTTON */}
+  {/* ➕ BUTTON */}
   <label
     htmlFor="fileUpload"
-    className="cursor-pointer px-3 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
+    className="cursor-pointer text-xl px-2"
   >
     +
   </label>
 
-  <Input
+  {/* 🖼️ INLINE IMAGE PREVIEW */}
+  {selectedFile && (
+    <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-full border">
+      <img
+        src={URL.createObjectURL(selectedFile)}
+        className="w-8 h-8 object-cover rounded"
+      />
+      <button
+        onClick={() => setSelectedFile(null)}
+        className="text-red-500 text-xs"
+      >
+        ✕
+      </button>
+    </div>
+  )}
+
+  {/* ✏️ INPUT */}
+  <input
     value={input}
     onChange={(e) => setInput(e.target.value)}
     onKeyDown={(e) => {
@@ -380,17 +387,18 @@ const macros = {
       }
     }}
     placeholder="Ask about your diet..."
-    className="flex-1"
+    className="flex-1 bg-transparent outline-none px-2"
     disabled={isLoading}
   />
 
-  <Button
+  {/* 🚀 SEND */}
+  <button
     onClick={sendMessage}
     disabled={isLoading || (!input.trim() && !selectedFile)}
-    className="bg-green-600 text-white px-6 py-2 rounded-lg"
+    className="bg-green-600 text-white px-4 py-1 rounded-full"
   >
     Send
-  </Button>
+  </button>
 </div>
         </div>
       </div>
