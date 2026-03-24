@@ -9,7 +9,7 @@ import faiss
 import numpy as np
 from google import genai
 from typing import Optional
-
+from fastapi import UploadFile, File, Form
 load_dotenv()
 
 app = FastAPI()
@@ -224,6 +224,47 @@ async def visualize_macros(req: ChatRequest):
             "carbs": carbs + 1,
             "fats": fats + 1
         }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    @app.post("/analyze-image")
+async def analyze_image(
+    file: UploadFile = File(...),
+    user_data: str = Form(...)
+):
+    try:
+        user = json.loads(user_data)
+        contents = await file.read()
+
+        prompt = f"""
+You are a friendly AI diet assistant.
+
+User Profile:
+Goal: {user.get('goal')}
+Weight: {user.get('weight')}
+Diet: {user.get('dietary_preference')}
+
+Analyze this food image:
+
+1. Identify food items
+2. Tell if it's suitable for their goal
+3. Suggest improvement
+
+Keep it short and conversational.
+"""
+
+        response = client.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=[
+                prompt,
+                {
+                    "mime_type": file.content_type,
+                    "data": contents
+                }
+            ]
+        )
+
+        return {"reply": response.text}
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
