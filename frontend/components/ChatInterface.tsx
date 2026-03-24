@@ -103,6 +103,8 @@ const userMessage: Message = {
   } finally {
     setIsLoading(false);
   }
+
+  setIsLoading(false);
 };
 const generateMealPlan = async () => {
   setLoadingMeal(true);
@@ -330,9 +332,9 @@ const macros = {
         </div>
         {/* Input Area */}
         <div className="bg-white border-t p-4">
-          <div className="flex items-center space-x-2 max-w-4xl mx-auto">
+           <div className="flex items-center gap-2 max-w-4xl mx-auto bg-gray-100 rounded-full px-3 py-2">
 
-  {/* 🔥 HIDDEN FILE INPUT */}
+  {/* 🔥 FILE INPUT */}
   <input
     type="file"
     accept="image/*"
@@ -345,15 +347,32 @@ const macros = {
     }}
   />
 
-  {/* 🔥 PLUS BUTTON */}
+  {/* ➕ BUTTON */}
   <label
     htmlFor="fileUpload"
-    className="cursor-pointer px-3 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
+    className="cursor-pointer text-xl px-2"
   >
     +
   </label>
 
-  <Input
+  {/* 🖼️ INLINE IMAGE PREVIEW */}
+  {selectedFile && (
+    <div className="flex items-center gap-1 bg-white px-2 py-1 rounded-full border">
+      <img
+        src={URL.createObjectURL(selectedFile)}
+        className="w-8 h-8 object-cover rounded"
+      />
+      <button
+        onClick={() => setSelectedFile(null)}
+        className="text-red-500 text-xs"
+      >
+        ✕
+      </button>
+    </div>
+  )}
+
+  {/* ✏️ INPUT */}
+  <input
     value={input}
     onChange={(e) => setInput(e.target.value)}
     onKeyDown={(e) => {
@@ -362,17 +381,18 @@ const macros = {
       }
     }}
     placeholder="Ask about your diet..."
-    className="flex-1"
+    className="flex-1 bg-transparent outline-none px-2"
     disabled={isLoading}
   />
 
-  <Button
+  {/* 🚀 SEND */}
+  <button
     onClick={sendMessage}
     disabled={isLoading || (!input.trim() && !selectedFile)}
-    className="bg-green-600 text-white px-6 py-2 rounded-lg"
+    className="bg-green-600 text-white px-4 py-1 rounded-full"
   >
     Send
-  </Button>
+  </button>
 </div>
         </div>
       </div>
