@@ -8,7 +8,7 @@ from sentence_transformers import SentenceTransformer
 import faiss
 import numpy as np
 from google import genai
-from typing import Optional
+from typing import Optional,List
 from fastapi import UploadFile, File,Form
 import json
 load_dotenv()
@@ -34,7 +34,7 @@ client = genai.Client(api_key=os.getenv("GEMINI_KEY"))
 class ChatRequest(BaseModel):
     query: str
     user_data: dict
-    history: list = []
+    history: Optional[List[dict]] = []
 
 @app.post("/chat")
 async def chat(req: ChatRequest):
