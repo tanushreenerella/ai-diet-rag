@@ -117,15 +117,35 @@ const generateMealPlan = async () => {
 
     const data = await res.json();
 
-    setMessages(prev => [
-      ...prev,
-      {
-        id: Date.now().toString(),
-        content: data.meal_plan,
-        role: "assistant",
-        timestamp: new Date(),
-      },
-    ]);
+// 1️⃣ Show meal plan text
+setMessages(prev => [
+  ...prev,
+  {
+    id: Date.now().toString(),
+    content: data.meal_plan,
+    role: "assistant",
+    timestamp: new Date(),
+  },
+]);
+
+// 2️⃣ Fetch macros + BMI
+const macros = await getMacros(data.meal_plan);
+const bmi = await getBMI();
+
+// 3️⃣ Push chart message
+setMessages(prev => [
+  ...prev,
+  {
+    id: Date.now().toString(),
+    role: "assistant",
+    timestamp: new Date(),
+    type: "chart",
+    chartData: {
+      macros,
+      bmi
+    },
+  },
+]);
 
   } catch (err) {
     console.error(err);
@@ -146,8 +166,7 @@ const getBMI = async () => {
       }),
     });
 
-    const data = await res.json();
-    setBmiData(data);
+    return await res.json();
   } catch (err) {
     console.error(err);
   }
@@ -166,9 +185,8 @@ const getMacros = async (mealText: string) => {
       }),
     });
 
-    const data = await res.json();
-    setMacroData(data);
-  } catch (err) {
+    return await res.json();
+      } catch (err) {
     console.error(err);
   }
 };
