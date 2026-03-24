@@ -34,6 +34,7 @@ client = genai.Client(api_key=os.getenv("GEMINI_KEY"))
 class ChatRequest(BaseModel):
     query: str
     user_data: dict
+    history: list = []
 
 @app.post("/chat")
 async def chat(req: ChatRequest):
@@ -83,7 +84,7 @@ User Question:
 
 Now respond in plain text only, with zero formatting.
 """
-
+        prompt += f"\nConversation History:\n{req.history}"
         # ✅ NOW INSIDE TRY
         response = client.models.generate_content(
             model="gemini-2.5-flash",

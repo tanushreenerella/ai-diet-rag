@@ -80,6 +80,10 @@ const userMessage: Message = {
       response = await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/chat`, {
         query: currentInput,
         user_data: userProfile,
+        history: messages.map(m => ({
+    role: m.role,
+    content: m.content
+  }))
       });
     }
 
