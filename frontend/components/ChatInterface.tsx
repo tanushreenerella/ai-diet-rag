@@ -256,8 +256,9 @@ const macros = {
   variant="outline"
   className="w-full justify-start text-left"
   onClick={generateMealPlan}
+  disabled={loadingMeal}
 >
-  🥗 Generate Meal Plan
+  {loadingMeal ? "⏳ Generating..." : "🥗 Generate Meal Plan"}
 </Button>
         </div>
       </div>
@@ -387,12 +388,16 @@ const macros = {
 
   {/* 🚀 SEND */}
   <button
-    onClick={sendMessage}
-    disabled={isLoading || (!input.trim() && !selectedFile)}
-    className="bg-green-600 text-white px-4 py-1 rounded-full"
-  >
-    Send
-  </button>
+  onClick={sendMessage}
+  disabled={isLoading || (!input.trim() && !selectedFile)}
+  className={`px-4 py-1 rounded-full ${
+    isLoading || (!input.trim() && !selectedFile)
+      ? "bg-gray-400 cursor-not-allowed"
+      : "bg-green-600 text-white"
+  }`}
+>
+  Send
+</button>
 </div>
         </div>
       </div>
