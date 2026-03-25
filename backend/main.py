@@ -8,13 +8,8 @@ from sentence_transformers import SentenceTransformer
 import faiss
 import numpy as np
 from google import genai
-<<<<<<< HEAD
-from typing import Optional,List
-from fastapi import UploadFile, File,Form
-=======
 from typing import Optional
 from fastapi import UploadFile, File, Form
->>>>>>> 4c387f7 (button changes)
 import json
 load_dotenv()
 
@@ -222,41 +217,15 @@ async def analyze_image(
         print("📸 File type:", file.content_type)
         print("📦 Size:", len(contents))
 
-<<<<<<< HEAD
-User Profile:
-Goal: {user.get('goal')}
-Weight: {user.get('weight')}
-Diet: {user.get('dietary_preference')}
-
-Analyze this food image:
-
-1. Identify food items
-2. Tell if it's suitable for their goal
-3. Suggest improvement if needed
-
-Keep it short, natural, and conversational.
-"""
-=======
         # 🔥 TEMP: remove image from Gemini (test only)
         prompt = "This is a food image. Give general diet advice."
->>>>>>> 4c387f7 (button changes)
 
         response = client.models.generate_content(
             model="gemini-2.5-flash",
             contents=prompt
         )
 
-<<<<<<< HEAD
-        # Safe extraction
-        if hasattr(response, "text") and response.text:
-            reply = response.text
-        else:
-            reply = "I couldn't analyze the image properly. Try again?"
-
-        return {"reply": reply}
-=======
         return {"reply": response.text or "No response"}
->>>>>>> 4c387f7 (button changes)
 
     except Exception as e:
         print("🔥 IMAGE ERROR:", e)
